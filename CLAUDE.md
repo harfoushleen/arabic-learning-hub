@@ -1,0 +1,66 @@
+# Arabic Letter Games — project rules
+
+
+
+## Product
+
+- Zero login, zero roles, zero settings. Open app → pick unit → pick game → play.
+
+- All curriculum content is static in `src/data/units.ts`. No localStorage, no runtime editing.
+
+- Audience: Arabic-speaking children ages 6–8, on iPad Safari (primary) and classroom laptops/projectors.
+
+- NO sound effects. Feedback is visual only. The only audio allowed is optional per-word teacher recordings, used only if the file exists.
+
+
+
+## Stack
+
+Vite + React 19 + TypeScript (strict) + Tailwind CSS v3 + shadcn/ui. RTL everywhere (`<html lang="ar" dir="rtl">`).
+
+Fonts: Cairo (UI/headings), Tajawal (body). Pastel palette; background #FBF7EF.
+
+
+
+## Touch & accessibility
+
+- Min tap target 48×48px (game pieces ≥ 64px). Min 12px gap between targets.
+
+- No HTML5 drag-and-drop (broken on iOS). Primary interaction = tap to select, tap to place. Drag via @dnd-kit is optional.
+
+- `touch-action: manipulation`; no double-tap zoom; `-webkit-tap-highlight-color: transparent`; `user-select: none` on game pieces.
+
+- Game Arabic text ≥ 32px with full tashkeel exactly as in the data. Never strip diacritics for display.
+
+- Respect `prefers-reduced-motion`.
+
+
+
+## Arabic letter joining (critical)
+
+- Splitting a word across elements (spans) breaks joining in WebKit/Safari. When a word must be split (e.g. to highlight one letter), use `src/lib/arabicJoining.ts`, which inserts U+200D ZERO WIDTH JOINER on both sides of a split ONLY where the letters truly connect.
+
+- Letters that never connect to the following letter: ا أ إ آ ٱ د ذ ر ز و ؤ ء ة. Never put a ZWJ after these.
+
+- Tatweel (ـ) is only for showing a standalone letter form on a choice tile (بـ ـبـ ـب ب). Never insert tatweel into a word.
+
+- Wherever possible, render a completed word as ONE text node.
+
+
+
+## Conventions
+
+- Games live in `src/components/games/`, one file per game, registered in `src/components/games/registry.ts`.
+
+- Answers are checked by id, never by comparing Arabic strings.
+
+- Games read content from `units.ts` via `unitId` prop; no hardcoded words in components.
+
+- Before finishing any task, run `npm run build`, `npx tsc --noEmit`, and `npx vitest run`.
+
+## Images
+- Cartoon/illustrated style only — no photos or realistic renders.
+- Only licensed sources, recorded in `public/images/CREDITS.md` (file, source URL, author, license).
+- Vocab images: `public/images/characters/` (razi, zizi) and `public/images/unit-1/<word-id>.<ext>`.
+- Game 2 scene images: `public/images/game-2/image-1..3.<ext>` (supplied by us, don't replace).
+- Every image/audio path in `units.ts` must exist in `public/` (enforced by a vitest test).
