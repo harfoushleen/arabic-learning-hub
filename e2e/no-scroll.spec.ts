@@ -32,6 +32,44 @@ interface Measure {
   outside: string[];
 }
 
+async function center(l: Locator) {
+  const box = (await l.boundingBox())!;
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+/**
+ * Drags with pointer events. `synthetic` dispatches them straight to the chip, for phones where the
+ * card can be scrolled out of view (the game logic is the same either way).
+ */
+async function drag(
+  page: Page,
+  from: Locator,
+  to: Locator | { x: number; y: number },
+  { synthetic = false, midDrag }: { synthetic?: boolean; midDrag?: () => Promise<void> } = {},
+) {
+  const a = await center(from);
+  const b = 'x' in to ? to : await center(to);
+  if (synthetic) {
+    const fire = (steps: { type: string; x: number; y: number }[]) =>
+      from.evaluate((el, st) => {
+        for (const e of st) {
+          el.dispatchEvent(new PointerEvent(e.type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'mouse', isPrimary: true, button: 0, clientX: e.x, clientY: e.y }));
+        }
+      }, steps);
+    await fire([{ type: 'pointerdown', ...a }, { type: 'pointermove', x: a.x + 12, y: a.y - 12 }, { type: 'pointermove', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }]);
+    if (midDrag) await midDrag();
+    await fire([{ type: 'pointermove', ...b }, { type: 'pointerup', ...b }]);
+    return;
+  }
+  await page.mouse.move(a.x, a.y);
+  await page.mouse.down();
+  await page.mouse.move(a.x + 12, a.y - 12, { steps: 2 });
+  await page.mouse.move((a.x + b.x) / 2, (a.y + b.y) / 2, { steps: 5 });
+  if (midDrag) await midDrag();
+  await page.mouse.move(b.x, b.y, { steps: 5 });
+  await page.mouse.up();
+}
+
 function measure(page: Page): Promise<Measure> {
   return page.evaluate(() => {
     const vw = window.innerWidth;
@@ -102,17 +140,15 @@ for (const vp of VIEWPORTS) {
       const chip = (id: string) => page.locator(`[data-chip="${id}"]`);
       const nextButton = page.getByRole('button', { name: 'التَّالِي' });
 
-      async function place(cardIndex: number) {
+      async function place(cardIndex: number, midDrag?: () => Promise<void>) {
         const card = cards.nth(cardIndex);
         const id = (await card.getAttribute('data-card'))!;
-        await press(chip(id));
-        await expect(chip(id)).toHaveAttribute('aria-pressed', 'true');
-        await press(card);
-        await expect(card).toBeDisabled();
+        await drag(page, chip(id), card, { synthetic: phone, midDrag });
+        await expect(card).toHaveAttribute('data-placed', 'true');
       }
       async function placeAll() {
         const n = await cards.count();
-        for (let i = 0; i < n; i++) if (await cards.nth(i).isEnabled()) await place(i);
+        for (let i = 0; i < n; i++) if ((await cards.nth(i).getAttribute('data-placed')) !== 'true') await place(i);
       }
 
       await page.goto('/');
@@ -129,14 +165,8 @@ for (const vp of VIEWPORTS) {
       const chipIds = await page.locator('[data-chip]').evaluateAll((els) => els.map((el) => el.dataset.chip));
       expect(chipIds.filter((id, i) => id === cardIds[i]), 'chips lined up with their pictures').toEqual([]);
 
-      // 2. After selecting a chip.
-      await press(page.locator('[data-chip]').first());
-      await settle();
-      await expectFits(page, 'chip selected', phone);
-      await press(page.locator('[data-chip][aria-pressed="true"]')); // deselect
-
-      // 3. After placing 2 words.
-      await place(0);
+      // 2. Mid-drag (the first word held over its card), then 3. after placing 2 words.
+      await place(0, () => expectFits(page, 'mid-drag', phone));
       await place(1);
       await settle();
       await expectFits(page, 'two placed', phone);
@@ -165,6 +195,51 @@ for (const vp of VIEWPORTS) {
       }
       await settle();
       await expectFits(page, 'final screen', phone);
+    });
+  });
+}
+
+for (const [label, browser, viewport, touch] of [
+  ['laptop', 'chromium', { width: 1280, height: 620 }, false],
+  ['ipad', 'webkit', { width: 1024, height: 690 }, true],
+] as const) {
+  test.describe(`word-picture drag rules ${label} @${browser}`, () => {
+    test.use({ viewport, hasTouch: touch });
+
+    test('tap, elsewhere, wrong and correct drops', async ({ page }) => {
+      await page.goto('/#/unit/unit-1/word-picture');
+      const cards = page.locator('[data-card]');
+      await expect(cards.first()).toBeVisible();
+      const [a, b] = (await cards.evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.card!))) as [string, string];
+      const chipA = page.locator(`[data-chip="${a}"]`);
+      const card = (id: string) => page.locator(`[data-card="${id}"]`);
+
+      // A tap never places a word; it wiggles.
+      await chipA.click();
+      await expect(chipA).toHaveAttribute('data-wiggle', 'true');
+      await expect(page.locator('[data-placed="true"]')).toHaveCount(0);
+
+      // Dropping elsewhere (the header strip) returns the chip and doesn't count.
+      await drag(page, chipA, { x: viewport.width / 2, y: 40 });
+      await expect(chipA).not.toHaveClass(/opacity-30/);
+      await expect(chipA).toHaveAttribute('data-shake', 'false');
+
+      // Wrong card: it glides back and shakes, nothing is placed.
+      await drag(page, chipA, card(b));
+      await expect(chipA).toHaveAttribute('data-shake', 'true');
+      await expect(chipA).toHaveAttribute('data-shake', 'false');
+      await expect(card(a)).toHaveAttribute('data-hint', 'false');
+
+      // Second wrong drop for the same word pulses its picture.
+      await drag(page, chipA, card(b));
+      await expect(card(a)).toHaveAttribute('data-hint', 'true');
+      await expect(chipA).toHaveAttribute('data-shake', 'true');
+      await expect(chipA).toHaveAttribute('data-shake', 'false');
+
+      // The right card takes the word.
+      await drag(page, chipA, card(a));
+      await expect(card(a)).toHaveAttribute('data-placed', 'true');
+      await expect(chipA).toHaveCount(0);
     });
   });
 }
