@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AnimationItem } from 'lottie-web';
+import type { Art } from '@/data/units';
 import { emojiAssets } from '@/lib/emoji';
 import { cn, prefersReducedMotion } from '@/lib/utils';
 
 interface EmojiArtProps {
   emoji: string;
+  /** Cartoon art for the word (public/art/); preferred over the Noto emoji. */
+  art?: Art;
   /** Size of the art: px, or any CSS length (it is square). */
   size: number | string;
   /** Animate now. With `loop` it keeps going; without, it plays once each time `play` turns on or `replay` changes. */
@@ -17,19 +20,31 @@ interface EmojiArtProps {
   className?: string;
 }
 
+/** How long an animated WebP plays for a one-shot (it can't report its own length). */
+const WEBP_ONE_SHOT_MS = 2400;
+
 /**
- * Google Noto emoji art: the animated Lottie when Noto has one (lottie-web's light SVG player,
- * loaded lazily), else the static Noto SVG with a gentle CSS sway/bob, else the native emoji.
- * The static SVG shows until the animation is ready. Reduced motion: always static.
+ * A word's picture, by preference:
+ * 1. `art`: a Lottie (lottie-web's light SVG player, loaded lazily) or an animated WebP that shows
+ *    its still frame when idle; a WebP without a still is static and gets the CSS sway/bob.
+ * 2. Google Noto emoji: the animated Lottie when Noto has one, else the static Noto SVG with the
+ *    CSS sway/bob; the static SVG shows until the animation is ready.
+ * 3. The native emoji.
+ * Reduced motion: always static (a Lottie shows a frame from its middle). Pauses while off-screen.
  */
-export function EmojiArt({ emoji, size, play = false, loop = false, replay, delay = 0, className }: EmojiArtProps) {
+export function EmojiArt({ emoji, art, size, play = false, loop = false, replay, delay = 0, className }: EmojiArtProps) {
   const assets = emojiAssets(emoji);
   const reduced = prefersReducedMotion();
+  const outer = useRef<HTMLSpanElement>(null);
   const box = useRef<HTMLSpanElement>(null);
   const anim = useRef<AnimationItem | null>(null);
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(true);
-  const lottieUrl = !reduced ? (assets?.lottie ?? null) : null;
+  const [webpPlaying, setWebpPlaying] = useState(0); // 0 = still; otherwise a run counter (remounts the image)
+
+  const artLottie = art?.type === 'lottie' ? art.src : null;
+  const lottieUrl = artLottie ?? (!reduced ? (assets?.lottie ?? null) : null);
+  const animatedWebp = art?.type === 'webp' && art.still ? art : null;
 
   // Load the Lottie player and file lazily.
   useEffect(() => {
@@ -40,7 +55,11 @@ export function EmojiArt({ emoji, size, play = false, loop = false, replay, dela
       .then(([{ default: lottie }, animationData]) => {
         if (cancelled) return;
         const item = lottie.loadAnimation({ container, renderer: 'svg', loop: false, autoplay: false, animationData });
-        item.addEventListener('DOMLoaded', () => !cancelled && setReady(true));
+        item.addEventListener('DOMLoaded', () => {
+          if (cancelled) return;
+          if (reduced) item.goToAndStop(Math.floor(item.totalFrames / 2), true); // a representative still
+          setReady(true);
+        });
         anim.current = item;
       })
       .catch(() => undefined); // keep the static SVG
@@ -50,21 +69,21 @@ export function EmojiArt({ emoji, size, play = false, loop = false, replay, dela
       anim.current = null;
       setReady(false);
     };
-  }, [lottieUrl]);
+  }, [lottieUrl, reduced]);
 
   // Pause while off-screen.
   useEffect(() => {
-    const el = box.current;
+    const el = outer.current;
     if (!el || typeof IntersectionObserver === 'undefined') return;
     const io = new IntersectionObserver(([e]) => setVisible(e?.isIntersecting ?? true));
     io.observe(el);
     return () => io.disconnect();
   }, []);
 
-  // Drive the animation.
+  // Drive a Lottie.
   useEffect(() => {
     const item = anim.current;
-    if (!item || !ready) return;
+    if (!item || !ready || reduced) return;
     if (!play || !visible) {
       // A loop finishes its current cycle and rests; off-screen it stops at once.
       item.loop = false;
@@ -74,7 +93,47 @@ export function EmojiArt({ emoji, size, play = false, loop = false, replay, dela
     item.loop = loop;
     const timer = window.setTimeout(() => item.goToAndPlay(0, true), loop ? 0 : delay);
     return () => window.clearTimeout(timer);
-  }, [ready, play, loop, visible, replay, delay]);
+  }, [ready, reduced, play, loop, visible, replay, delay]);
+
+  // Drive an animated WebP: swap the still for the animation while it should play.
+  useEffect(() => {
+    if (!animatedWebp || reduced) return;
+    const timers: number[] = [];
+    if (play && visible) {
+      timers.push(window.setTimeout(() => setWebpPlaying((n) => n + 1), loop ? 0 : delay));
+      if (!loop) timers.push(window.setTimeout(() => setWebpPlaying(0), delay + WEBP_ONE_SHOT_MS));
+    } else {
+      timers.push(window.setTimeout(() => setWebpPlaying(0), 0));
+    }
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, [animatedWebp, reduced, play, loop, visible, replay, delay]);
+
+  const boxStyle = { width: size, height: size };
+  const cssMotionFor = (staticPicture: boolean) =>
+    staticPicture && !reduced && play ? (loop ? 'animate-sway' : 'animate-bob') : undefined;
+
+  if (art) {
+    if (art.type === 'lottie') {
+      return (
+        <span ref={outer} aria-hidden data-art={art.src} className={cn('relative inline-block shrink-0', className)} style={boxStyle}>
+          <span ref={box} className="pointer-events-none absolute inset-0 [&>svg]:!h-full [&>svg]:!w-full" />
+        </span>
+      );
+    }
+    const cssMotion = cssMotionFor(!animatedWebp);
+    return (
+      <span ref={outer} aria-hidden data-art={art.src} className={cn('relative inline-block shrink-0', className)} style={boxStyle}>
+        <img
+          key={animatedWebp ? webpPlaying : cssMotion === 'animate-bob' ? String(replay) : undefined}
+          src={animatedWebp && webpPlaying ? art.src : (art.still ?? art.src)}
+          alt=""
+          draggable={false}
+          className={cn('pointer-events-none absolute inset-0 h-full w-full object-contain', cssMotion)}
+          style={cssMotion === 'animate-bob' && delay ? { animationDelay: `${delay}ms` } : undefined}
+        />
+      </span>
+    );
+  }
 
   if (!assets) {
     return (
@@ -85,9 +144,9 @@ export function EmojiArt({ emoji, size, play = false, loop = false, replay, dela
   }
 
   // No animation file: a CSS sway (loop) or bob (one-shot) on the static SVG.
-  const cssMotion = !lottieUrl && !reduced && play ? (loop ? 'animate-sway' : 'animate-bob') : undefined;
+  const cssMotion = cssMotionFor(!lottieUrl);
   return (
-    <span aria-hidden className={cn('relative inline-block shrink-0', className)} style={{ width: size, height: size }}>
+    <span ref={outer} aria-hidden className={cn('relative inline-block shrink-0', className)} style={boxStyle}>
       <img
         key={cssMotion === 'animate-bob' ? String(replay) : undefined}
         src={assets.svg}

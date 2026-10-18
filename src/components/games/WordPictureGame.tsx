@@ -429,7 +429,7 @@ function PictureCard({
   loop: boolean;
 }) {
   const frame = 'w-full shrink-0 overflow-hidden rounded-2xl';
-  if (word.image && !failed) {
+  if (word.image && !failed && !word.art) {
     return (
       <span className={cn(frame, 'block bg-white')} style={{ height }}>
         <img
@@ -443,8 +443,17 @@ function PictureCard({
     );
   }
   return (
-    <span role="img" aria-label={word.text} style={{ height }} className={cn(frame, pastel, 'flex items-center justify-center')}>
-      <EmojiArt emoji={word.emoji} size={Math.min(Math.round(emojiSize * 1.15), height - 8)} play loop={loop} replay={replay} delay={delay} />
+    <span role="img" aria-label={word.text} style={{ height }} className={cn(frame, word.art ? 'bg-white' : pastel, 'flex items-center justify-center')}>
+      <EmojiArt
+        emoji={word.emoji}
+        art={word.art}
+        // Cartoon art is a whole scene, so it fills the picture; an emoji stays emoji-sized.
+        size={word.art ? '100%' : Math.min(Math.round(emojiSize * 1.15), height - 8)}
+        play
+        loop={loop}
+        replay={replay}
+        delay={delay}
+      />
     </span>
   );
 }

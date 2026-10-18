@@ -4,10 +4,18 @@
 export type GameId = 'word-picture' | 'sentence-picture' | 'letter-forms' | 'unscramble';
 export type LetterForm = 'بـ' | 'ـبـ' | 'ـب' | 'ب';
 
+/**
+ * Cartoon art for a word, in public/art/. Shown instead of the
+ * Noto emoji. lottie: a Lottie JSON. webp: an animated WebP plus a still first frame shown when idle;
+ * without `still` it's a static picture that gets the gentle CSS motion.
+ */
+export interface Art { src: string; type: 'lottie' | 'webp'; still?: string; }
+
 export interface VocabWord {
   id: string;                 // ascii slug = asset file name
   text: string;               // full tashkeel
   emoji: string;              // fallback if the image is missing or fails to load
+  art?: Art;                  // preferred over image and emoji; set ONLY if the files exist in public/
   image?: string;             // set ONLY if the file exists in public/
   audio?: string;             // set ONLY if the file exists in public/
   confusableWith?: string[];  // never in the same round
@@ -18,6 +26,7 @@ export type LetterFormPart =
 export interface LetterFormItem {
   id: string; target: string; parts: LetterFormPart[];
   emoji: string;   // picture of the word; fallback if the image is missing or fails to load
+  art?: Art;       // preferred over image and emoji; set ONLY if the files exist in public/
   image?: string;  // set ONLY if the file exists in public/
 }
 export interface UnscrambleTile { id: string; text: string; }
@@ -45,26 +54,26 @@ export interface Unit {
 //   audio:  /audio/unit-1/<id>.<ext>
 // Add `image` / `audio` to a word only once the file exists; units.test.ts checks every path.
 const unit1Vocab: VocabWord[] = [
-  { id: 'razi', text: 'رَازِي', emoji: '👦', confusableWith: ['ab'] },
-  { id: 'zizi', text: 'زِيزِي', emoji: '👧' },
-  { id: 'zara', text: 'زَارَ', emoji: '👋', image: '/images/unit-1/zara.jpg', confusableWith: ['zahra'] },
-  { id: 'bayt', text: 'بَيْت', emoji: '🏠' },
-  { id: 'sharaha', text: 'شَرَحَ', emoji: '🧑‍🏫' },
+  { id: 'razi', text: 'رَازِي', emoji: '👦', art: { src: '/art/razi.webp', type: 'webp', still: '/art/razi-still.webp' }, confusableWith: ['ab', 'barid'] },
+  { id: 'zizi', text: 'زِيزِي', emoji: '👧', art: { src: '/art/zizi.json', type: 'lottie' }, confusableWith: ['ab'] },
+  { id: 'zara', text: 'زَارَ', emoji: '👋', image: '/images/unit-1/zara.jpg', confusableWith: ['zahra', 'bab', 'bayt'] },
+  { id: 'bayt', text: 'بَيْت', emoji: '🏠', confusableWith: ['zara'] },
+  { id: 'sharaha', text: 'شَرَحَ', emoji: '🧑‍🏫', art: { src: '/art/sharaha.json', type: 'lottie' } },
   { id: 'arza', text: 'أَرْزَة', emoji: '🌲' },
-  { id: 'mawza', text: 'مَوْزَة', emoji: '🍌' },
+  { id: 'mawza', text: 'مَوْزَة', emoji: '🍌', art: { src: '/art/mawza.json', type: 'lottie' } },
   { id: 'zahra', text: 'زَهْرَة', emoji: '🌷', confusableWith: ['zara'] },
-  { id: 'darz', text: 'دَرْز', emoji: '🪡' },
+  { id: 'darz', text: 'دَرْز', emoji: '🪡', art: { src: '/art/darz.json', type: 'lottie' } },
   { id: 'kalb', text: 'كَلْب', emoji: '🐕', confusableWith: ['barud'] },
   // Barud is the dog's name.
   { id: 'barud', text: 'بَارُود', emoji: '🐩', confusableWith: ['kalb'] },
-  { id: 'bab', text: 'بَابُ', emoji: '🚪' },
+  { id: 'bab', text: 'بَابُ', emoji: '🚪', art: { src: '/art/bab.json', type: 'lottie' }, confusableWith: ['zara'] },
   { id: 'tabl', text: 'طَبْل', emoji: '🥁' },
-  { id: 'zabib', text: 'زَبِيب', emoji: '🍇' },
-  { id: 'barid', text: 'بَارِد', emoji: '🥶' },
-  { id: 'duroob', text: 'دُرُوب', emoji: '🛣️' },
+  { id: 'zabib', text: 'زَبِيب', emoji: '🍇', art: { src: '/art/zabib.webp', type: 'webp' } },
+  { id: 'barid', text: 'بَارِد', emoji: '🥶', art: { src: '/art/barid.webp', type: 'webp', still: '/art/barid-still.webp' }, confusableWith: ['razi'] },
+  { id: 'duroob', text: 'دُرُوب', emoji: '🛣️', art: { src: '/art/duroob.json', type: 'lottie' } },
   { id: 'arnab', text: 'أَرْنَب', emoji: '🐇' },
-  { id: 'ab', text: 'أَب', emoji: '👨‍👦', confusableWith: ['razi'] },
-  { id: 'laiba', text: 'لَعِبَ', emoji: '🤸', image: '/images/unit-1/laiba.png' },
+  { id: 'ab', text: 'أَب', emoji: '👨‍👦', art: { src: '/art/ab.webp', type: 'webp', still: '/art/ab-still.webp' }, confusableWith: ['razi', 'zizi'] },
+  { id: 'laiba', text: 'لَعِبَ', emoji: '🤸', art: { src: '/art/laiba.json', type: 'lottie' } },
 ];
 
 export const units: Unit[] = [
@@ -117,7 +126,7 @@ export const units: Unit[] = [
     letterForms: [
       {
         id: 'dabdoob',
-        emoji: '🧸',
+        emoji: '🧸', art: { src: '/art/dabdoob.json', type: 'lottie' },
         target: 'دَبْدُوب',
         parts: [
           { type: 'text', value: 'دَ' },
@@ -147,7 +156,7 @@ export const units: Unit[] = [
       },
       {
         id: 'qarraba',
-        emoji: '🔌', image: '/images/unit-1/qarraba.webp',
+        emoji: '🔌', art: { src: '/art/qarraba.json', type: 'lottie' },
         target: 'قَرَّبَ',
         parts: [
           { type: 'text', value: 'قَرَّ' },
@@ -156,7 +165,7 @@ export const units: Unit[] = [
       },
       {
         id: 'laiba',
-        emoji: '🤸', image: '/images/unit-1/laiba.png',
+        emoji: '🤸', art: { src: '/art/laiba.json', type: 'lottie' },
         target: 'لَعِبَ',
         parts: [
           { type: 'text', value: 'لَعِ' },

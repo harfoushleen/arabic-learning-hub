@@ -61,13 +61,24 @@ describe('units data', () => {
   it('keeps look-alike words apart', () => {
     const vocab = getUnit('unit-1')!.vocab;
     const pairs = vocab.flatMap((w) => (w.confusableWith ?? []).map((o) => [w.id, o].sort().join('|')));
-    expect(new Set(pairs)).toEqual(new Set(['ab|razi', 'barud|kalb', 'zahra|zara']));
+    expect(new Set(pairs)).toEqual(
+      new Set(['ab|razi', 'ab|zizi', 'barid|razi', 'bab|zara', 'bayt|zara', 'barud|kalb', 'zahra|zara']),
+    );
   });
 
   it('every letter-forms word has a picture emoji', () => {
     for (const item of units.flatMap((u) => u.letterForms)) {
       expect(item.emoji.trim(), `${item.id} emoji`).not.toBe('');
     }
+  });
+
+  it('every art file (src and still) exists under public/', () => {
+    const paths = units.flatMap((u) => [...u.vocab, ...u.letterForms].flatMap((w) => (w.art ? [w.art.src, w.art.still] : [])));
+    expect(paths.length).toBeGreaterThan(0);
+    const missing = paths
+      .filter((p): p is string => p !== undefined)
+      .filter((p) => !p.startsWith('/art/') || !existsSync(publicDir + p.slice(1)));
+    expect(missing).toEqual([]);
   });
 
   it('every image/audio path exists under public/', () => {

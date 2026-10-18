@@ -342,19 +342,19 @@ function WordPicture({
   onError: () => void;
   complete: boolean;
 }) {
-  const showImage = item.image && !failed;
+  const showImage = item.image && !failed && !item.art;
   return (
     <div
       data-picture={item.id}
       role="img"
       aria-label={item.target}
-      className={cn('game-piece flex shrink-0 items-center justify-center overflow-hidden rounded-3xl shadow-md', showImage ? 'bg-white' : pastel, complete && 'animate-pop')}
+      className={cn('game-piece flex shrink-0 items-center justify-center overflow-hidden rounded-3xl shadow-md', showImage || item.art ? 'bg-white' : pastel, complete && 'animate-pop')}
       style={{ width: size, height: size }}
     >
       {showImage ? (
         <img src={item.image} alt="" draggable={false} onError={onError} className="pointer-events-none h-full w-full object-contain p-2" />
       ) : (
-        <EmojiArt emoji={item.emoji} size={Math.round(size * 0.82)} play loop replay={complete} />
+        <EmojiArt emoji={item.emoji} art={item.art} size={Math.round(size * (item.art ? 0.94 : 0.82))} play loop replay={complete} />
       )}
     </div>
   );
