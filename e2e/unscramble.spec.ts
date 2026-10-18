@@ -58,6 +58,27 @@ async function expectReturned(t: Locator) {
   await expect(t).not.toHaveClass(/opacity-30/);
 }
 
+/**
+ * Wiggle, shake and hint last well under a second, so a slow run can poll right past them. Record
+ * every tile that turns one on instead, and assert on the record.
+ */
+async function recordFlags(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __flags: Set<string> };
+    w.__flags = new Set();
+    new MutationObserver((records) => {
+      for (const r of records) {
+        const el = r.target as HTMLElement;
+        if (el.getAttribute(r.attributeName!) === 'true') w.__flags.add(`${r.attributeName!.slice(5)}:${el.dataset.tile}`);
+      }
+    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-wiggle', 'data-shake', 'data-hint'] });
+  });
+}
+const clearFlags = (page: Page) => page.evaluate(() => (window as unknown as { __flags: Set<string> }).__flags.clear());
+const saw = (page: Page, flag: string, tileId: string) =>
+  page.evaluate((key) => (window as unknown as { __flags: Set<string> }).__flags.has(key), `${flag}:${tileId}`);
+const expectSaw = (page: Page, flag: string, tileId: string) => expect.poll(() => saw(page, flag, tileId)).toBe(true);
+
 async function openGame(page: Page, press: (l: Locator) => Promise<void>) {
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
@@ -142,11 +163,13 @@ for (const [label, browser, viewport, touch] of [
       const answer = set.answers[0]!;
       const correct = tile(page, answer[0]!);
       const wrong = tile(page, answer.find((id) => !set.answers.some((a) => a[0] === id))!);
+      const wrongId = (await wrong.getAttribute('data-tile'))!;
       const filled = page.locator('[data-slot-tile]');
+      await recordFlags(page);
 
       // A tap never places a word; it wiggles instead.
       await wrong.click();
-      await expect(wrong).toHaveAttribute('data-wiggle', 'true');
+      await expectSaw(page, 'wiggle', wrongId);
       await expect(filled).toHaveCount(0);
 
       // Dropping elsewhere (the header strip, and the picture) returns the tile and doesn't count.
@@ -154,21 +177,23 @@ for (const [label, browser, viewport, touch] of [
         await drag(page, wrong, target);
         await expectReturned(wrong);
       }
-      await expect(wrong).toHaveAttribute('data-shake', 'false');
+      await page.waitForTimeout(300); // a shake would have started by now
+      expect(await saw(page, 'shake', wrongId)).toBe(false);
       await expect(filled).toHaveCount(0);
 
       // First wrong drop: it glides back and shakes, no slot fills, no hint yet.
       await drag(page, wrong, strip(page));
-      await expect(wrong).toHaveAttribute('data-shake', 'true');
+      await expectSaw(page, 'shake', wrongId);
       await expect(filled).toHaveCount(0);
-      await expect(correct).toHaveAttribute('data-hint', 'false');
+      expect(await saw(page, 'hint', answer[0]!)).toBe(false);
       await expect(wrong).toHaveAttribute('data-shake', 'false');
 
       // Second wrong drop on the same slot pulses the correct tile.
+      await clearFlags(page);
       await drag(page, wrong, strip(page));
-      await expect(correct).toHaveAttribute('data-hint', 'true');
+      await expectSaw(page, 'hint', answer[0]!);
       await expect(filled).toHaveCount(0);
-      await expect(wrong).toHaveAttribute('data-shake', 'true');
+      await expectSaw(page, 'shake', wrongId);
       await expect(wrong).toHaveAttribute('data-shake', 'false');
 
       // The correct tile fills the next slot and leaves the bank.

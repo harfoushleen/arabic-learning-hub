@@ -160,7 +160,7 @@ export const units: Unit[] = [
     unscramble: [
       {
         id: 'set-1',
-        image: '/images/game-2/image-2.png',
+        image: '/images/game-2/image-2.jpg',
         tiles: [
           { id: 'fi', text: 'فِي' },
           { id: 'laiba', text: 'لَعِبَ' },
@@ -185,7 +185,7 @@ export const units: Unit[] = [
       },
       {
         id: 'set-3',
-        image: '/images/game-2/image-3.png',
+        image: '/images/game-2/image-3.jpg',
         tiles: [
           { id: 'razi', text: 'رَازِي' },
           { id: 'zizi', text: 'زِيزِي' },
