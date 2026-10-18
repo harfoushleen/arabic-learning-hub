@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { units, type LetterFormItem } from '@/data/units';
+import { letterFormItems, units, type LetterFormItem } from '@/data/units';
 import {
   ZWJ,
   connects,
   expectedForm,
+  formName,
+  formsFor,
   joinedSegments,
   stripTashkeel,
   worksheetSegments,
 } from './arabicJoining';
 
-const letterForms = units.flatMap((u) => u.letterForms);
+const letterForms = units.flatMap(letterFormItems);
+const setOf = (id: string) => units.flatMap((u) => u.letterForms).find((s) => s.items.some((i) => i.id === id))!;
 const byId = (id: string): LetterFormItem => {
   const item = letterForms.find((f) => f.id === id);
   if (!item) throw new Error(`missing letterForms item ${id}`);
@@ -53,13 +56,37 @@ describe('letterForms data', () => {
           expect(partBases).toHaveLength(1);
           const prev = bases[index - 1] ?? null;
           const next = bases[index + 1] ?? null;
-          expect(part.answer).toBe(expectedForm(prev, next));
+          expect(part.answer).toBe(expectedForm(setOf(item.id).letter, prev, next));
         }
         index += partBases.length;
       }
       expect(index).toBe(bases.length);
     },
   );
+});
+
+describe('formsFor / formName', () => {
+  it('gives a dual-joining letter 4 forms and a non-forward-joiner 2', () => {
+    expect(formsFor('ب')).toEqual(['بـ', 'ـبـ', 'ـب', 'ب']);
+    expect(formsFor('ز')).toEqual(['ز', 'ـز']);
+    expect(formsFor('ب').map(formName)).toEqual(['initial', 'medial', 'final', 'isolated']);
+    expect(formsFor('ز').map(formName)).toEqual(['isolated', 'final']);
+  });
+
+  it('never gives ز a joined-forward form', () => {
+    expect(expectedForm('ز', 'ن', 'ل')).toBe('ـز');
+    expect(expectedForm('ز', 'ر', null)).toBe('ز');
+    expect(expectedForm('ز', null, 'ر')).toBe('ز');
+    expect(expectedForm('ب', 'ط', 'ل')).toBe('ـبـ');
+  });
+
+  it('every answer is one of its letter tiles', () => {
+    for (const set of units.flatMap((u) => u.letterForms)) {
+      for (const item of set.items) {
+        for (const part of item.parts) if (part.type === 'blank') expect(formsFor(set.letter)).toContain(part.answer);
+      }
+    }
+  });
 });
 
 describe('joinedSegments', () => {
@@ -111,6 +138,21 @@ describe('worksheetSegments', () => {
     expect(ws('alkalb')).toBe('الكَلْـ ▢');
     expect(ws('dabdoob')).toBe('دَ ▢ ـدُو ▢');
     expect(ws('qarraba')).toBe('قَرَّ ▢');
+  });
+
+  it('dashes before ز where the previous letter joins it, never after it', () => {
+    expect(ws('manzil')).toBe('مَنْـ ▢ ل');
+    expect(ws('nazala')).toBe('نَـ ▢ لَ');
+    expect(ws('karaz')).toBe('كَرَ ▢');
+    expect(ws('jazar')).toBe('جَـ ▢ ر');
+    expect(ws('zarafa')).toBe('▢ رَافَة');
+  });
+
+  it('puts no ZWJ after ز in a completed word', () => {
+    for (const item of setOf('manzil').items) {
+      const text = joinedSegments(item.parts, allFilled(item)).map((s) => s.text).join('');
+      expect(stripTashkeel(text), item.id).not.toMatch(new RegExp(`ز${ZWJ}`));
+    }
   });
 
   it('dashes the remaining blank of a half-filled word and joins the filled one', () => {

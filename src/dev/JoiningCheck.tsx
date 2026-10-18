@@ -2,11 +2,11 @@
 // (ب colored, split across spans) next to the plain target string. They must look identical
 // apart from the color. The first column is the unfilled worksheet view (dashes beside the blank).
 // Delete once checked on a real iPad.
-import { units } from '@/data/units';
+import { letterFormItems, units } from '@/data/units';
 import { joinedSegments, worksheetSegments } from '@/lib/arabicJoining';
 
 export default function JoiningCheck() {
-  const items = units.flatMap((u) => u.letterForms);
+  const items = units.flatMap(letterFormItems);
   return (
     <div className="p-6">
       <table className="border-separate border-spacing-x-8 border-spacing-y-2">

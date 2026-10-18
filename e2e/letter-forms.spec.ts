@@ -1,10 +1,11 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { units, type LetterForm } from '../src/data/units';
+import { letterFormItems, units } from '../src/data/units';
+import { formName } from '../src/lib/arabicJoining';
 import { VIEWPORTS, expectFits, expectPictureShare } from './fit';
 
 const ZWJ = '‍';
-const TILE_FOR_ANSWER: Record<LetterForm, string> = { 'بـ': 'initial', 'ـبـ': 'medial', 'ـب': 'final', 'ب': 'isolated' };
-const ITEMS = new Map(units[0]!.letterForms.map((item) => [item.id, item]));
+const ITEMS = new Map(letterFormItems(units[0]!).map((item) => [item.id, item]));
+const ZAY = units[0]!.letterForms.find((s) => s.id === 'zay')!;
 
 const tile = (page: Page, id: string) => page.locator(`[data-tile="${id}"]`);
 const activeBlank = (page: Page) => page.locator('[data-blank][data-active="true"]');
@@ -35,12 +36,16 @@ async function expectReturned(t: Locator) {
   await expect(t).not.toHaveClass(/opacity-30/);
 }
 
-async function openGame(page: Page, press: (l: Locator) => Promise<void>) {
+/** Opens Game 3 from the home screen, picks `setId` in the letter chooser (null: stay there). */
+async function openGame(page: Page, press: (l: Locator) => Promise<void>, setId: string | null = 'baa') {
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   await press(page.locator('[data-unit-card="unit-1"]'));
   await press(page.locator('[data-game-card="letter-forms"]'));
   await expect(page.locator('#active-game-container[data-game="letter-forms"]')).toBeVisible();
+  await expect(page.locator('[data-letter-set]')).toHaveCount(units[0]!.letterForms.length);
+  if (!setId) return;
+  await press(page.locator(`[data-letter-set="${setId}"]`));
   await expect(page.locator('[data-word]')).toBeVisible();
 }
 
@@ -66,7 +71,7 @@ async function playAll(page: Page, onState: (state: string) => Promise<void> = a
 
     const blanks = item.parts.filter((p) => p.type === 'blank');
     for (const [i, blank] of blanks.entries()) {
-      await drag(page, tile(page, TILE_FOR_ANSWER[blank.answer]), activeBlank(page), first && i === 0 ? () => onState('mid-drag') : undefined);
+      await drag(page, tile(page, formName(blank.answer)), activeBlank(page), first && i === 0 ? () => onState('mid-drag') : undefined);
       await expect(page.locator('[data-blank]')).toHaveCount(blanks.length - i - 1);
       if (id === 'dabdoob' && i === 0) {
         await expect(activeBlank(page)).toHaveCount(1);
@@ -120,8 +125,8 @@ for (const [label, browser, viewport, touch] of [
       const blanksBefore = await page.locator('[data-blank]').count();
       const answer = item.parts.find((p) => p.type === 'blank')!;
       if (answer.type !== 'blank') throw new Error('no blank');
-      const correctId = TILE_FOR_ANSWER[answer.answer];
-      const wrongId = Object.values(TILE_FOR_ANSWER).find((t) => t !== correctId)!;
+      const correctId = formName(answer.answer);
+      const wrongId = (['initial', 'medial', 'final', 'isolated'] as const).find((t) => t !== correctId)!;
       const correct = tile(page, correctId);
       const wrong = tile(page, wrongId);
       const home = await wrong.boundingBox();
@@ -172,7 +177,68 @@ test.describe('letter-forms replay @chromium', () => {
     await page.getByRole('button', { name: 'أَعِدِ اللُّعْبَةَ' }).click();
     await expect(page.locator('[data-word]')).toBeVisible();
     const second = await playAll(page);
-    expect(first).toHaveLength(ITEMS.size);
+    expect(first).toHaveLength(units[0]!.letterForms.find((s) => s.id === 'baa')!.items.length);
     expect(second).not.toEqual(first);
+  });
+});
+
+for (const vp of VIEWPORTS.filter((v) => v.kind !== 'phone')) {
+  const browser = vp.kind === 'desktop' ? 'chromium' : 'webkit';
+  const touch = vp.kind !== 'desktop';
+
+  test.describe(`letter-forms ز ${vp.name} ${vp.width}x${vp.height} @${browser}`, () => {
+    test.use({ viewport: { width: vp.width, height: vp.height }, hasTouch: touch });
+
+    test('the chooser, a ز word and the final screen fit without scrolling', async ({ page }) => {
+      await openGame(page, (l) => (touch ? l.tap() : l.click()), null);
+      await page.waitForTimeout(300);
+      await expectFits(page, 'letter chooser', false);
+      await (touch ? page.locator('[data-letter-set="zay"]').tap() : page.locator('[data-letter-set="zay"]').click());
+      await expect(page.locator('[data-word]')).toBeVisible();
+      await playAll(page, async (state) => {
+        if (state === 'mid-drag') return;
+        await page.waitForTimeout(700);
+        if (state === 'word start' || state === 'final screen') await expectFits(page, `ز ${state}`, false);
+      });
+    });
+  });
+}
+
+test.describe('letter-forms ز rules @chromium', () => {
+  test.use({ viewport: { width: 1280, height: 620 } });
+
+  test('the chooser shows ب and ز; ز has 2 tiles and every ز word completes correctly', async ({ page }) => {
+    await openGame(page, (l) => l.click(), null);
+    await expect(page.locator('[data-letter-set]')).toHaveText([/ب/, /ز/]);
+    await page.locator('[data-letter-set="zay"]').click();
+    await expect(page).toHaveURL(/#\/unit\/unit-1\/letter-forms\/zay$/);
+    await expect(page.locator('[data-tile]')).toHaveCount(2);
+    const order = await playAll(page); // checks every completed word's text against its target
+    expect([...order].sort()).toEqual(ZAY.items.map((i) => i.id).sort());
+  });
+
+  test('"حَرْفٌ آخَرُ" returns to the chooser, and browser back goes set → chooser → unit', async ({ page }) => {
+    await openGame(page, (l) => l.click(), 'zay');
+    await playAll(page);
+    await page.getByRole('button', { name: 'حَرْفٌ آخَرُ' }).click();
+    await expect(page.locator('[data-letter-set]')).toHaveCount(2);
+    await expect(page).toHaveURL(/#\/unit\/unit-1\/letter-forms$/);
+
+    await page.locator('[data-letter-set="baa"]').click();
+    await expect(page.locator('[data-tile]')).toHaveCount(4);
+    await page.goBack();
+    await expect(page.locator('[data-letter-set]')).toHaveCount(2);
+    await page.goBack();
+    await expect(page.locator('#active-game-container')).toHaveCount(0);
+    await expect(page.locator('[data-game-card]')).toHaveCount(4);
+  });
+
+  test('the deep link opens the ز set; closing it lands on the unit screen', async ({ page }) => {
+    await page.goto('/#/unit/unit-1/letter-forms/zay');
+    await expect(page.locator('[data-word]')).toBeVisible();
+    await expect(page.locator('[data-tile]')).toHaveCount(2);
+    await page.getByRole('button', { name: 'إِغْلَاق' }).click();
+    await expect(page.locator('#active-game-container')).toHaveCount(0);
+    await expect(page).toHaveURL(/#\/unit\/unit-1$/);
   });
 });

@@ -11,6 +11,9 @@
   "1f34c": {
     "animated": false
   },
+  "1f352": {
+    "animated": true
+  },
   "1f3e0": {
     "animated": true
   },
@@ -59,10 +62,19 @@
   "1f941": {
     "animated": true
   },
+  "1f955": {
+    "animated": true
+  },
   "1f976": {
     "animated": true
   },
+  "1f992": {
+    "animated": false
+  },
   "1f9d1_200d_1f3eb": {
+    "animated": false
+  },
+  "1f9d2": {
     "animated": false
   },
   "1f9e9": {

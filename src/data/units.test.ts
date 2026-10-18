@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { emojiCodepoints } from '../lib/emoji';
-import { getUnit, units } from './units';
+import { getUnit, letterFormItems, units } from './units';
 
 const publicDir = fileURLToPath(new URL('../../public/', import.meta.url));
 
@@ -67,13 +67,13 @@ describe('units data', () => {
   });
 
   it('every letter-forms word has a picture emoji', () => {
-    for (const item of units.flatMap((u) => u.letterForms)) {
+    for (const item of units.flatMap((u) => letterFormItems(u))) {
       expect(item.emoji.trim(), `${item.id} emoji`).not.toBe('');
     }
   });
 
   it('every art file (src and still) exists under public/', () => {
-    const paths = units.flatMap((u) => [...u.vocab, ...u.letterForms].flatMap((w) => (w.art ? [w.art.src, w.art.still] : [])));
+    const paths = units.flatMap((u) => [...u.vocab, ...letterFormItems(u)].flatMap((w) => (w.art ? [w.art.src, w.art.still] : [])));
     expect(paths.length).toBeGreaterThan(0);
     const missing = paths
       .filter((p): p is string => p !== undefined)
@@ -85,7 +85,7 @@ describe('units data', () => {
     const paths = units.flatMap((u) => [
       ...u.vocab.flatMap((w) => [w.image, w.audio]),
       ...u.sentencePictures.map((s) => s.image),
-      ...u.letterForms.map((f) => f.image),
+      ...letterFormItems(u).map((f) => f.image),
       ...u.unscramble.map((set) => set.image),
     ]);
     const missing = paths
@@ -95,7 +95,7 @@ describe('units data', () => {
   });
 
   it('every emoji in units.ts has at least a static Noto SVG in public/emoji/', () => {
-    const emoji = units.flatMap((u) => [...u.vocab.map((w) => w.emoji), ...u.letterForms.map((f) => f.emoji), ...u.games.map((g) => g.emoji)]);
+    const emoji = units.flatMap((u) => [...u.vocab.map((w) => w.emoji), ...letterFormItems(u).map((f) => f.emoji), ...u.games.map((g) => g.emoji)]);
     const missing = [...new Set(emoji)].filter((e) => !existsSync(`${publicDir}emoji/${emojiCodepoints(e)}.svg`));
     expect(missing, 'run: node scripts/fetch-emoji-assets.mjs').toEqual([]);
   });

@@ -2,7 +2,8 @@
 // Arabic text is stored with full tashkeel and must be displayed exactly as written here.
 
 export type GameId = 'word-picture' | 'sentence-picture' | 'letter-forms' | 'unscramble';
-export type LetterForm = 'بـ' | 'ـبـ' | 'ـب' | 'ب';
+/** A contextual letter form as shown on a choice tile, e.g. 'بـ' 'ـبـ' 'ـب' 'ب' or 'ز' 'ـز'. */
+export type LetterForm = string;
 
 /**
  * Cartoon art for a word, in public/art/. Shown instead of the
@@ -29,6 +30,13 @@ export interface LetterFormItem {
   art?: Art;       // preferred over image and emoji; set ONLY if the files exist in public/
   image?: string;  // set ONLY if the file exists in public/
 }
+/** One letter's words in Game 3; the child picks a set (letter) first. */
+export interface LetterFormSet {
+  id: string; letter: string;
+  name: string;         // e.g. 'حَرْفُ البَاءِ', shown under the letter in the chooser
+  instruction: string;
+  items: LetterFormItem[];
+}
 export interface UnscrambleTile { id: string; text: string; }
 export interface UnscrambleSet {
   id: string; tiles: UnscrambleTile[]; answers: string[][]; needsReview?: string;
@@ -46,7 +54,7 @@ export interface Unit {
   label: string;  // e.g. 'الوَحْدَةُ الأُولَى'
   theme: Theme;
   games: GameDef[]; vocab: VocabWord[]; sentencePictures: SentencePictureItem[];
-  letterForms: LetterFormItem[]; unscramble: UnscrambleSet[];
+  letterForms: LetterFormSet[]; unscramble: UnscrambleSet[];
 }
 
 // Asset conventions (paths are relative to public/, served from the site root):
@@ -102,10 +110,10 @@ export const units: Unit[] = [
       },
       {
         id: 'letter-forms',
-        title: 'أَشْكَالُ حَرْفِ البَاءِ',
-        instruction: 'أَضَعُ الحَرْفَ (ب) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
+        title: 'أَشْكَالُ الحُرُوفِ',
+        instruction: 'أَخْتَارُ الحَرْفَ', // the letter chooser; each set has its own instruction
         emoji: '🔤',
-        short: 'أُكْمِلُ الكَلِمَةَ بِالشَّكْلِ المُنَاسِبِ',
+        short: 'أَخْتَارُ حَرْفًا وَأُكْمِلُ الكَلِمَةَ',
         theme: 'mint',
       },
       {
@@ -125,60 +133,125 @@ export const units: Unit[] = [
     ],
     letterForms: [
       {
-        id: 'dabdoob',
-        emoji: '🧸', art: { src: '/art/dabdoob.json', type: 'lottie' },
-        target: 'دَبْدُوب',
-        parts: [
-          { type: 'text', value: 'دَ' },
-          { type: 'blank', answer: 'بـ', fill: 'بْ' },
-          { type: 'text', value: 'دُو' },
-          { type: 'blank', answer: 'ب', fill: 'ب' },
+        id: 'baa',
+        letter: 'ب',
+        name: 'حَرْفُ البَاءِ',
+        instruction: 'أَضَعُ الحَرْفَ (ب) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
+        items: [
+          {
+            id: 'dabdoob',
+            emoji: '🧸', art: { src: '/art/dabdoob.json', type: 'lottie' },
+            target: 'دَبْدُوب',
+            parts: [
+              { type: 'text', value: 'دَ' },
+              { type: 'blank', answer: 'بـ', fill: 'بْ' },
+              { type: 'text', value: 'دُو' },
+              { type: 'blank', answer: 'ب', fill: 'ب' },
+            ],
+          },
+          {
+            id: 'arnab',
+            emoji: '🐇',
+            target: 'أَرْنَب',
+            parts: [
+              { type: 'text', value: 'أَرْنَ' },
+              { type: 'blank', answer: 'ـب', fill: 'ب' },
+            ],
+          },
+          {
+            id: 'tabl',
+            emoji: '🥁',
+            target: 'طَبْل',
+            parts: [
+              { type: 'text', value: 'طَ' },
+              { type: 'blank', answer: 'ـبـ', fill: 'بْ' },
+              { type: 'text', value: 'ل' },
+            ],
+          },
+          {
+            id: 'qarraba',
+            emoji: '🔌', art: { src: '/art/qarraba.json', type: 'lottie' },
+            target: 'قَرَّبَ',
+            parts: [
+              { type: 'text', value: 'قَرَّ' },
+              { type: 'blank', answer: 'ب', fill: 'بَ' },
+            ],
+          },
+          {
+            id: 'laiba',
+            emoji: '🤸', art: { src: '/art/laiba.json', type: 'lottie' },
+            target: 'لَعِبَ',
+            parts: [
+              { type: 'text', value: 'لَعِ' },
+              { type: 'blank', answer: 'ـب', fill: 'بَ' },
+            ],
+          },
+          {
+            id: 'alkalb',
+            emoji: '🐕',
+            target: 'الكَلْب',
+            parts: [
+              { type: 'text', value: 'الكَلْ' },
+              { type: 'blank', answer: 'ـب', fill: 'ب' },
+            ],
+          },
         ],
       },
+      // TODO(teacher): confirm كَرَز and the tashkeel of the ز words.
       {
-        id: 'arnab',
-        emoji: '🐇',
-        target: 'أَرْنَب',
-        parts: [
-          { type: 'text', value: 'أَرْنَ' },
-          { type: 'blank', answer: 'ـب', fill: 'ب' },
-        ],
-      },
-      {
-        id: 'tabl',
-        emoji: '🥁',
-        target: 'طَبْل',
-        parts: [
-          { type: 'text', value: 'طَ' },
-          { type: 'blank', answer: 'ـبـ', fill: 'بْ' },
-          { type: 'text', value: 'ل' },
-        ],
-      },
-      {
-        id: 'qarraba',
-        emoji: '🔌', art: { src: '/art/qarraba.json', type: 'lottie' },
-        target: 'قَرَّبَ',
-        parts: [
-          { type: 'text', value: 'قَرَّ' },
-          { type: 'blank', answer: 'ب', fill: 'بَ' },
-        ],
-      },
-      {
-        id: 'laiba',
-        emoji: '🤸', art: { src: '/art/laiba.json', type: 'lottie' },
-        target: 'لَعِبَ',
-        parts: [
-          { type: 'text', value: 'لَعِ' },
-          { type: 'blank', answer: 'ـب', fill: 'بَ' },
-        ],
-      },
-      {
-        id: 'alkalb',
-        emoji: '🐕',
-        target: 'الكَلْب',
-        parts: [
-          { type: 'text', value: 'الكَلْ' },
-          { type: 'blank', answer: 'ـب', fill: 'ب' },
+        id: 'zay',
+        letter: 'ز',
+        name: 'حَرْفُ الزَّايِ',
+        instruction: 'أَضَعُ الحَرْفَ (ز) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
+        items: [
+          {
+            id: 'manzil',
+            emoji: '🏠',
+            target: 'مَنْزِل',
+            parts: [
+              { type: 'text', value: 'مَنْ' },
+              { type: 'blank', answer: 'ـز', fill: 'زِ' },
+              { type: 'text', value: 'ل' },
+            ],
+          },
+          {
+            id: 'nazala',
+            emoji: '🧒', art: { src: '/art/nazala.webp', type: 'webp' }, // a boy walking down stairs
+            target: 'نَزَلَ',
+            parts: [
+              { type: 'text', value: 'نَ' },
+              { type: 'blank', answer: 'ـز', fill: 'زَ' },
+              { type: 'text', value: 'لَ' },
+            ],
+          },
+          {
+            id: 'karaz',
+            emoji: '🍒',
+            target: 'كَرَز',
+            parts: [
+              { type: 'text', value: 'كَرَ' },
+              { type: 'blank', answer: 'ز', fill: 'ز' },
+            ],
+          },
+          {
+            id: 'jazar',
+            emoji: '🥕', art: { src: '/art/jazar.webp', type: 'webp', still: '/art/jazar-still.webp' },
+            target: 'جَزَر',
+            parts: [
+              { type: 'text', value: 'جَ' },
+              { type: 'blank', answer: 'ـز', fill: 'زَ' },
+              { type: 'text', value: 'ر' },
+            ],
+          },
+          {
+            id: 'zarafa',
+            emoji: '🦒', art: { src: '/art/zarafa.json', type: 'lottie' },
+            target: 'زَرَافَة',
+            parts: [
+              { type: 'blank', answer: 'ز', fill: 'زَ' },
+              { type: 'text', value: 'رَافَة' },
+            ],
+          },
         ],
       },
     ],
@@ -222,6 +295,11 @@ export const units: Unit[] = [
     ],
   },
 ];
+
+/** Every Game 3 word of a unit, across its letter sets. */
+export function letterFormItems(unit: Unit): LetterFormItem[] {
+  return unit.letterForms.flatMap((set) => set.items);
+}
 
 export function getUnit(id: string): Unit | undefined {
   return units.find((unit) => unit.id === id);

@@ -35,7 +35,10 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [route.unitId]);
 
-  const closeGame = () => leave({ unitId: route.unitId, gameId: null });
+  // From a game's sub-screen (a Game 3 letter set) closing steps back past the sub-screen too.
+  const closeGame = () => leave({ unitId: route.unitId, gameId: null }, route.subId ? 2 : 1);
+  const toSub = (subId: string | null) =>
+    subId ? go({ ...route, subId }) : leave({ unitId: route.unitId, gameId: route.gameId, subId: null });
 
   return (
     <>
@@ -50,7 +53,9 @@ export default function App() {
       )}
 
       <Dialog open={gameOpen} onOpenChange={(open) => !open && closeGame()}>
-        {unit && route.gameId && <GameDialog unit={unit} gameId={route.gameId} onClose={closeGame} />}
+        {unit && route.gameId && (
+          <GameDialog unit={unit} gameId={route.gameId} subId={route.subId ?? null} onSub={toSub} onClose={closeGame} />
+        )}
       </Dialog>
     </>
   );
@@ -231,7 +236,19 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
   );
 }
 
-function GameDialog({ unit, gameId, onClose }: { unit: Unit; gameId: GameId; onClose: () => void }) {
+function GameDialog({
+  unit,
+  gameId,
+  subId,
+  onSub,
+  onClose,
+}: {
+  unit: Unit;
+  gameId: GameId;
+  subId: string | null;
+  onSub: (subId: string | null) => void;
+  onClose: () => void;
+}) {
   const Game = gameRegistry[gameId];
   const title = unit.games.find((g) => g.id === gameId)?.title ?? '';
   return (
@@ -245,7 +262,7 @@ function GameDialog({ unit, gameId, onClose }: { unit: Unit; gameId: GameId; onC
         }
       >
         <div id="active-game-container" data-game={gameId} data-unit={unit.id}>
-          <Game unitId={unit.id} onExit={onClose} />
+          <Game unitId={unit.id} onExit={onClose} subId={subId} onSub={onSub} />
         </div>
       </Suspense>
     </DialogContent>

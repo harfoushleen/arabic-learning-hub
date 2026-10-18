@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import { EmojiArt } from '@/components/EmojiArt';
-import { getUnit, type LetterForm, type LetterFormItem, type LetterFormPart } from '@/data/units';
+import { getUnit, type LetterFormItem, type LetterFormPart, type LetterFormSet } from '@/data/units';
 import { solveFitGrid, useFitGrid, type FitGridConfig, type FitGridLayout } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { useTimers } from '@/hooks/useTimers';
-import { TATWEEL, worksheetSegments, ZWJ } from '@/lib/arabicJoining';
-import { celebrate } from '@/lib/celebrate';
+import { formName, formsFor, TATWEEL, worksheetSegments, ZWJ, type FormName } from '@/lib/arabicJoining';
 import { starsFor } from '@/lib/rounds';
 import { shuffle, shuffleAvoiding } from '@/lib/shuffle';
 import { textWidth } from '@/lib/textWidth';
@@ -17,15 +16,10 @@ import { GameFinal } from './GameFinal';
 import { GameStage } from './GameStage';
 import type { GameProps } from './types';
 
-// Tiles are identified by id; answers are never checked by comparing Arabic strings.
-type TileId = 'initial' | 'medial' | 'final' | 'isolated';
-const TILES: { id: TileId; form: LetterForm }[] = [
-  { id: 'initial', form: 'بـ' },
-  { id: 'medial', form: 'ـبـ' },
-  { id: 'final', form: 'ـب' },
-  { id: 'isolated', form: 'ب' },
-];
-const TILE_FOR_ANSWER: Record<LetterForm, TileId> = { 'بـ': 'initial', 'ـبـ': 'medial', 'ـب': 'final', 'ب': 'isolated' };
+// Tiles are identified by their form's name (initial/medial/final/isolated); answers are never
+// checked by comparing Arabic strings.
+type TileId = FormName;
+const tilesFor = (letter: string) => formsFor(letter).map((form) => ({ id: formName(form), form }));
 
 const SHAKE_MS = 500;
 const WIGGLE_MS = 450;
@@ -37,7 +31,9 @@ const GAP = 24;
 const INSET = 8;
 const MIN_TILE = 80;
 const GOOD_TILE = 110; // the word shrinks before tiles go below this
+const GOOD_TILE_FEW = 150; // same, for a letter with only 2 tiles (ز), so its tiles come out bigger
 const MAX_TILE = 140;
+const MAX_TILE_FEW = 180; // a letter with only 2 forms (ز) gets bigger tiles
 const MAX_WORD_FONT = 72;
 const MIN_WORD_FONT = 40;
 const MIN_PICTURE = 96;
@@ -63,49 +59,104 @@ const wordBlockHeight = (font: number) => Math.max(Math.ceil(font * LINE), blank
 
 const PASTELS = ['bg-pastel-blue', 'bg-pastel-pink', 'bg-pastel-mint', 'bg-pastel-yellow', 'bg-pastel-lilac', 'bg-pastel-peach'];
 
-export default function LetterFormsGame({ unitId, onExit }: GameProps) {
-  const [session, setSession] = useState<{ key: number; previous: string[] | null }>({ key: 0, previous: null });
+export default function LetterFormsGame({ unitId, onExit, subId, onSub }: GameProps) {
+  const [session, setSession] = useState<{ key: number; setId: string | null; previous: string[] | null }>({
+    key: 0,
+    setId: null,
+    previous: null,
+  });
   const unit = getUnit(unitId);
   const game = unit?.games.find((g) => g.id === 'letter-forms');
+  const sets = unit?.letterForms.filter((s) => s.items.length > 0) ?? [];
 
-  if (!unit || !game || unit.letterForms.length === 0) {
+  if (!unit || !game || sets.length === 0) {
     return (
       <GameStage onClose={onExit}>
         <p className="p-8 text-center text-vowelled text-3xl">لَا تُوجَدُ كَلِمَاتٌ</p>
       </GameStage>
     );
   }
+  // One set plays straight away; several start with the letter chooser.
+  const set = sets.length === 1 ? sets[0]! : sets.find((s) => s.id === subId);
+  if (!set) {
+    return <LetterChooser sets={sets} title={game.title} instruction={game.instruction} onPick={(id) => onSub?.(id)} onExit={onExit} />;
+  }
   return (
     <Session
-      key={session.key}
-      items={unit.letterForms}
-      previousOrder={session.previous}
+      key={`${set.id}:${session.key}`}
+      set={set}
+      previousOrder={session.setId === set.id ? session.previous : null}
       title={game.title}
-      instruction={game.instruction}
-      onRestart={(order) => setSession((s) => ({ key: s.key + 1, previous: order }))}
+      onRestart={(order) => setSession((s) => ({ key: s.key + 1, setId: set.id, previous: order }))}
+      onOtherLetter={sets.length > 1 ? () => onSub?.(null) : undefined}
       onExit={onExit}
     />
+  );
+}
+
+/** Big letter tiles, one per set (built from the data, so a new letter appears by itself). */
+function LetterChooser({
+  sets,
+  title,
+  instruction,
+  onPick,
+  onExit,
+}: {
+  sets: LetterFormSet[];
+  title: string;
+  instruction: string;
+  onPick: (setId: string) => void;
+  onExit?: () => void;
+}) {
+  return (
+    <GameStage title={title} instruction={instruction} onClose={onExit}>
+      <div className="flex h-full flex-wrap content-center items-center justify-center gap-[clamp(16px,4vw,48px)] p-2">
+        {sets.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            data-letter-set={s.id}
+            onClick={() => onPick(s.id)}
+            className="game-piece flex flex-col items-center justify-center gap-2 rounded-card-lg bg-white px-6 pb-4 pt-6 shadow-card transition-transform active:translate-y-[3px] active:shadow-card-pressed focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-ink"
+            style={{ width: 'clamp(150px, calc(var(--app-h, 100dvh) * 0.34), 280px)' }}
+          >
+            {/* A fixed-height box, so letters with a tail (ز) don't push their name lower than others. */}
+            <span
+              className="flex items-center justify-center font-naskh font-bold leading-none text-sky-ink"
+              style={{ fontSize: 'clamp(80px, calc(var(--app-h, 100dvh) * 0.18), 160px)', height: '1.25em' }}
+            >
+              {s.letter}
+            </span>
+            <span className="text-vowelled text-[clamp(22px,calc(var(--app-h,100dvh)*0.04),32px)]">{s.name}</span>
+          </button>
+        ))}
+      </div>
+    </GameStage>
   );
 }
 
 type Phase = 'playing' | 'holding' | 'word-done' | 'finished';
 
 interface SessionProps {
-  items: LetterFormItem[];
+  set: LetterFormSet;
   previousOrder: string[] | null;
   title: string;
-  instruction: string;
   onRestart: (order: string[]) => void;
+  /** Back to the letter chooser (only when the unit has several letters). */
+  onOtherLetter?: () => void;
   onExit?: () => void;
 }
 
-function Session({ items, previousOrder, title, instruction, onRestart, onExit }: SessionProps) {
+function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }: SessionProps) {
+  const items = set.items;
+  const instruction = set.instruction;
+  const [tiles] = useState(() => tilesFor(set.letter));
   // Fresh word order on every open; a replay never repeats the previous order.
   const [words] = useState(() => {
     const previous = previousOrder?.map((id) => items.find((it) => it.id === id)!);
     return previous ? shuffleAvoiding(items, previous) : shuffle(items);
   });
-  const [tileOrders] = useState(() => words.map(() => shuffle(TILES)));
+  const [tileOrders] = useState(() => words.map(() => shuffle(tiles)));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('playing');
   const [filled, setFilled] = useState<(string | null)[]>(() => words[0]!.parts.map(() => null));
@@ -125,11 +176,11 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   // the word instead. Either way a GAP separates it from the word, keeping it outside the blank's
   // 24px drop margin, so a drop on the picture counts as "elsewhere".
   const fitConfig = (beside: boolean, picture: number, maxFont: number): FitGridConfig => ({
-    count: TILES.length,
+    count: tiles.length,
     gap: GAP,
     inset: INSET,
     minWidth: MIN_TILE,
-    maxWidth: MAX_TILE,
+    maxWidth: tiles.length <= 2 ? MAX_TILE_FEW : MAX_TILE,
     cardHeight: (w) => w,
     reserveHeight: (_w, areaWidth) => {
       const word = wordBlockHeight(wordFont(item, maxFont, areaWidth - 2 * INSET - (beside ? picture + GAP : 0)));
@@ -148,7 +199,7 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
       for (let picture = target; picture >= MIN_PICTURE; picture -= 8) {
         for (let font = MAX_WORD_FONT; font >= MIN_WORD_FONT; font -= 4) {
           const layout = solveFitGrid(width, height, fitConfig(beside, picture, font));
-          if (layout.fits && layout.cardWidth >= GOOD_TILE) return { layout, picture, font, beside };
+          if (layout.fits && layout.cardWidth >= (tiles.length <= 2 ? GOOD_TILE_FEW : GOOD_TILE)) return { layout, picture, font, beside };
         }
         const layout = solveFitGrid(width, height, fitConfig(beside, picture, MIN_WORD_FONT));
         if (layout.fits) return { layout, picture, font: MIN_WORD_FONT, beside };
@@ -187,7 +238,7 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
 
   function dropTile(id: TileId): DropResult {
     const blank = item.parts[activeBlank] as Extract<LetterFormPart, { type: 'blank' }>;
-    const correct = TILE_FOR_ANSWER[blank.answer];
+    const correct = formName(blank.answer);
 
     if (id === correct) {
       const next = [...filled];
@@ -236,7 +287,13 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
     const totalBlanks = words.reduce((n, w) => n + w.parts.filter((p) => p.type === 'blank').length, 0);
     const stars = starsFor(totalBlanks - Object.keys(misses).length, totalBlanks);
     overlay = (
-      <FinalWithConfetti stars={stars} onRestart={() => onRestart(words.map((w) => w.id))} onExit={onExit} />
+      <GameFinal
+        stars={stars}
+        confetti="always"
+        onRestart={() => onRestart(words.map((w) => w.id))}
+        onExit={onExit}
+        extra={onOtherLetter && { label: 'حَرْفٌ آخَرُ', onClick: onOtherLetter }}
+      />
     );
   }
 
@@ -420,11 +477,3 @@ function Word({
   );
 }
 
-function FinalWithConfetti(props: { stars: 1 | 2 | 3; onRestart: () => void; onExit?: () => void }) {
-  // GameFinal celebrates a perfect score itself; this game celebrates every finish.
-  const { stars } = props;
-  useEffect(() => {
-    if (stars < 3) celebrate();
-  }, [stars]);
-  return <GameFinal {...props} />;
-}

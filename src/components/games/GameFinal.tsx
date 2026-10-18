@@ -9,12 +9,15 @@ export function GameFinal({
   onRestart,
   onExit,
   confetti = 'perfect',
+  extra,
 }: {
   stars: 1 | 2 | 3;
   onRestart: () => void;
   onExit?: () => void;
   /** 'perfect': confetti only for 3 stars (Game 1); 'always': on every finish. */
   confetti?: 'perfect' | 'always';
+  /** An extra button between replay and back (Game 3: "another letter"). */
+  extra?: { label: string; onClick: () => void };
 }) {
   useEffect(() => {
     if (stars === 3 || confetti === 'always') celebrate();
@@ -44,6 +47,11 @@ export function GameFinal({
         <BigButton onClick={onRestart} autoFocus>
           أَعِدِ اللُّعْبَةَ
         </BigButton>
+        {extra && (
+          <BigButton onClick={extra.onClick} variant="secondary">
+            {extra.label}
+          </BigButton>
+        )}
         {onExit && (
           <BigButton onClick={onExit} variant="secondary">
             عَوْدَة

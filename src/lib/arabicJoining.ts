@@ -31,14 +31,37 @@ export function connects(prevBase: string, nextBase: string): boolean {
   );
 }
 
-/** The contextual form a dual-joining letter (ب) takes between `prev` and `next` base letters. */
-export function expectedForm(prev: string | null, next: string | null): LetterForm {
-  const joinsPrev = !!prev && connects(prev, 'ب');
-  const joinsNext = !!next && next !== 'ء';
-  if (joinsPrev && joinsNext) return 'ـبـ';
-  if (joinsPrev) return 'ـب';
-  if (joinsNext) return 'بـ';
-  return 'ب';
+export const TATWEEL = 'ـ';
+
+export type FormName = 'initial' | 'medial' | 'final' | 'isolated';
+
+/**
+ * The choice tiles for a letter: a dual-joining letter (ب) has 4 forms [بـ ـبـ ـب ب]; a letter that
+ * never connects forward (ا د ذ ر ز و) has only [isolated, final], e.g. [ز ـز].
+ */
+export function formsFor(letter: string): LetterForm[] {
+  if (NON_FORWARD_JOINERS.has(letter)) return [letter, TATWEEL + letter];
+  return [letter + TATWEEL, TATWEEL + letter + TATWEEL, TATWEEL + letter, letter];
+}
+
+/** Which form a tile shows, from where its tatweels are. */
+export function formName(form: LetterForm): FormName {
+  const before = form.startsWith(TATWEEL);
+  const after = form.endsWith(TATWEEL) && form.length > 1;
+  if (before && after) return 'medial';
+  if (before) return 'final';
+  if (after) return 'initial';
+  return 'isolated';
+}
+
+/** The contextual form `letter` takes between `prev` and `next` base letters (a non-forward-joiner never joins the next one). */
+export function expectedForm(letter: string, prev: string | null, next: string | null): LetterForm {
+  const joinsPrev = !!prev && connects(prev, letter);
+  const joinsNext = !!next && connects(letter, next);
+  if (joinsPrev && joinsNext) return TATWEEL + letter + TATWEEL;
+  if (joinsPrev) return TATWEEL + letter;
+  if (joinsNext) return letter + TATWEEL;
+  return letter;
 }
 
 export interface JoinedSegment {
@@ -78,11 +101,10 @@ export function joinedSegments(
   return out;
 }
 
-export const TATWEEL = 'ـ';
-
 /**
  * Worksheet view of a word with missing letters: like joinedSegments(), plus a tatweel beside each
- * EMPTY blank wherever the neighboring letter really connects to the ب (dual-joining), e.g. طَـ▢ـل.
+ * EMPTY blank wherever the neighboring letter really connects to the missing letter, e.g. طَـ▢ـل
+ * for ب; after a ز (which never joins forward) there's no dash, e.g. مَنْـ▢ل.
  * Only for display next to an unfilled blank — a completed word never contains tatweel.
  */
 export function worksheetSegments(
@@ -91,13 +113,16 @@ export function worksheetSegments(
 ): JoinedSegment[] {
   const out = joinedSegments(parts, filled);
   out.forEach((seg, i) => {
-    if (!seg.isBlank || stripTashkeel(seg.text).replaceAll(ZWJ, '') !== '') return;
+    const part = parts[i];
+    if (part?.type !== 'blank' || stripTashkeel(seg.text).replaceAll(ZWJ, '') !== '') return;
+    const letter = baseLetters(part.fill)[0];
+    if (!letter) return;
     const before = out[i - 1];
     const after = out[i + 1];
     const last = before && baseLetters(before.text).at(-1);
     const first = after && baseLetters(after.text)[0];
-    if (before && last && connects(last, 'ب')) before.text += TATWEEL;
-    if (after && first && connects('ب', first)) after.text = TATWEEL + after.text;
+    if (before && last && connects(last, letter)) before.text += TATWEEL;
+    if (after && first && connects(letter, first)) after.text = TATWEEL + after.text;
   });
   return out;
 }

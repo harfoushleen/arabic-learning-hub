@@ -26,7 +26,7 @@ const uses = new Map();
 const add = (emoji, word) => uses.set(emoji, [...(uses.get(emoji) ?? []), word]);
 for (const unit of units) {
   for (const w of unit.vocab) add(w.emoji, w.text);
-  for (const f of unit.letterForms) add(f.emoji, f.target);
+  for (const f of unit.letterForms.flatMap((set) => set.items)) add(f.emoji, f.target);
   for (const g of unit.games) add(g.emoji, g.title);
 }
 

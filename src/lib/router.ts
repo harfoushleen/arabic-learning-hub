@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getUnit, type GameId } from '@/data/units';
 
-// Hash routes: #/ (home), #/unit/<unitId> (unit screen), #/unit/<unitId>/<gameId> (game dialog).
+// Hash routes: #/ (home), #/unit/<unitId> (unit screen), #/unit/<unitId>/<gameId> (game dialog),
+// #/unit/<unitId>/<gameId>/<subId> (a game's own sub-screen: Game 3's chosen letter set).
 export interface Route {
   unitId: string | null;
   gameId: GameId | null;
+  subId?: string | null;
 }
 
 const HOME: Route = { unitId: null, gameId: null };
@@ -13,23 +15,32 @@ const HOME: Route = { unitId: null, gameId: null };
 export function parseHash(hash: string): Route | null {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (parts.length === 0) return HOME;
-  if (parts[0] !== 'unit' || parts.length > 3) return null;
+  if (parts[0] !== 'unit' || parts.length > 4) return null;
   const unit = getUnit(decodeURIComponent(parts[1] ?? ''));
   if (!unit) return null;
   if (parts.length === 2) return { unitId: unit.id, gameId: null };
   const game = unit.games.find((g) => g.id === decodeURIComponent(parts[2]!));
-  return game ? { unitId: unit.id, gameId: game.id } : null;
+  if (!game) return null;
+  if (parts.length === 3) return { unitId: unit.id, gameId: game.id };
+  // Only Game 3 has sub-screens: one per letter set.
+  const set = game.id === 'letter-forms' ? unit.letterForms.find((s) => s.id === decodeURIComponent(parts[3]!)) : undefined;
+  return set ? { unitId: unit.id, gameId: game.id, subId: set.id } : null;
 }
 
-export function hashFor({ unitId, gameId }: Route): string {
+export function hashFor({ unitId, gameId, subId }: Route): string {
   if (!unitId) return '#/';
-  return gameId ? `#/unit/${unitId}/${gameId}` : `#/unit/${unitId}`;
+  if (!gameId) return `#/unit/${unitId}`;
+  return subId ? `#/unit/${unitId}/${gameId}/${subId}` : `#/unit/${unitId}/${gameId}`;
 }
 
-// Entries the app pushed itself are marked, so "close" can step back through history (keeping
-// browser back and iPad swipe-back in sync) instead of stacking up new entries.
-const IN_APP = { inApp: true };
-const pushedByApp = () => (history.state as typeof IN_APP | null)?.inApp === true;
+// Entries the app pushed itself carry their depth (how many app pushes since the page was opened),
+// so "close" can step back through history (keeping browser back and iPad swipe-back in sync)
+// instead of stacking up new entries — even several steps, e.g. from a letter set to the unit.
+interface AppState {
+  inApp: true;
+  depth: number;
+}
+const depth = () => ((history.state as AppState | null)?.inApp ? (history.state as AppState).depth : 0);
 
 function current(): Route {
   const route = parseHash(location.hash);
@@ -55,14 +66,18 @@ export function useHashRoute() {
   }, []);
 
   const go = useCallback((next: Route) => {
-    history.pushState(IN_APP, '', hashFor(next));
+    const state: AppState = { inApp: true, depth: depth() + 1 };
+    history.pushState(state, '', hashFor(next));
     setRoute(next);
   }, []);
 
-  /** Back to `parent`: a real history step if the app got here itself, else a replace (deep link). */
-  const leave = useCallback((parent: Route) => {
-    if (pushedByApp()) {
-      history.back();
+  /**
+   * Back to `parent`, `steps` levels up: real history steps if the app pushed that many entries
+   * itself, else a replace (deep link).
+   */
+  const leave = useCallback((parent: Route, steps = 1) => {
+    if (depth() >= steps) {
+      history.go(-steps);
     } else {
       history.replaceState(null, '', hashFor(parent));
       setRoute(parent);
