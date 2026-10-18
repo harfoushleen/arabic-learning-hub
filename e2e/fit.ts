@@ -24,7 +24,7 @@ export async function expectFits(page: Page, state: string, phone: boolean) {
     const doc = document.scrollingElement ?? document.documentElement;
     const game = document.getElementById('active-game-container')!;
     const play = game.querySelector<HTMLElement>('[data-play-area]');
-    const outside = [...document.querySelectorAll<HTMLElement>('[data-sentence], [data-picture], [data-word], [data-tile], [data-blank], #active-game-container button')]
+    const outside = [...document.querySelectorAll<HTMLElement>('[data-sentence], [data-picture], [data-word], [data-tile], [data-blank], [data-strip], #active-game-container button')]
       .filter((el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden')
       .map((el) => ({ el, r: el.getBoundingClientRect() }))
       .filter(({ r }) => r.top < -0.5 || r.left < -0.5 || r.bottom > vh + 0.5 || r.right > vw + 0.5)
