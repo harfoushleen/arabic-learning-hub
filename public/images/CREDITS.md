@@ -15,3 +15,12 @@ Characters go in `characters/` (razi, zizi); unit words go in `unit-1/<word-id>.
 | `unit-1/zara.jpg` | TBD | TBD | TBD — supplied by the teacher; confirm source and license |
 | `unit-1/laiba.png` | TBD | TBD | TBD — supplied by the teacher; confirm source and license |
 | `unit-1/qarraba.webp` | TBD | TBD | TBD — supplied by the teacher; confirm source and license |
+
+## Emoji art (`public/emoji/`)
+
+Fetched by `scripts/fetch-emoji-assets.mjs`; shown in-app under the home screen's "credits" link.
+
+| Files | Source URL | Author | License |
+| --- | --- | --- | --- |
+| `emoji/*.svg` | https://github.com/googlefonts/noto-emoji (2D/svg) | Google — Noto Emoji | Apache License 2.0 |
+| `emoji/*.json` (Lottie) | https://googlefonts.github.io/noto-emoji-animation/ | Google — Noto Animated Emoji | CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/) — attribution required |

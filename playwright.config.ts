@@ -10,6 +10,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     locale: 'ar',
+    // Static emoji art and no motion keep screenshots and no-scroll checks stable.
+    reducedMotion: 'reduce',
   },
   // Each viewport's describe block is tagged with the browser it must run in.
   projects: [

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { EmojiArt } from '@/components/EmojiArt';
 import { getUnit, type VocabWord } from '@/data/units';
 import { useFitGrid } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
@@ -15,6 +16,7 @@ import type { GameProps } from './types';
 const PASTELS = ['bg-pastel-blue', 'bg-pastel-pink', 'bg-pastel-mint', 'bg-pastel-yellow', 'bg-pastel-lilac', 'bg-pastel-peach'];
 const SHAKE_MS = 500;
 const POP_MS = 600;
+const CELEBRATE_MS = 2000;
 const HINT_MS = 1300;
 const ROUND_DONE_DELAY_MS = 650;
 
@@ -120,6 +122,7 @@ function Session({ words, title, instruction, onRestart, onExit }: SessionProps)
   const [selected, setSelected] = useState<string | null>(null);
   const [wrong, setWrong] = useState<{ chipId: string; slotId: string } | null>(null);
   const [popSlot, setPopSlot] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState<string | null>(null);
   const [hintSlot, setHintSlot] = useState<string | null>(null);
   const [misses, setMisses] = useState<Readonly<Record<string, number>>>({});
   const [failedImages, setFailedImages] = useState<ReadonlySet<string>>(() => new Set());
@@ -179,6 +182,9 @@ function Session({ words, title, instruction, onRestart, onExit }: SessionProps)
       setPlaced(nextPlaced);
       setPopSlot(chipId);
       later(() => setPopSlot((cur) => (cur === chipId ? null : cur)), POP_MS);
+      // The matched picture animates on a loop for 2s as part of the celebration.
+      setCelebrating(chipId);
+      later(() => setCelebrating((cur) => (cur === chipId ? null : cur)), CELEBRATE_MS);
       if (word.audio) new Audio(word.audio).play().catch(() => {});
       if (round.words.every((w) => nextPlaced.has(w.id))) {
         later(() => {
@@ -254,6 +260,7 @@ function Session({ words, title, instruction, onRestart, onExit }: SessionProps)
           selected={selected}
           wrong={wrong}
           popSlot={popSlot}
+          celebrating={celebrating}
           hintSlot={hintSlot}
           failedImages={failedImages}
           byId={byId}
@@ -276,6 +283,7 @@ interface PlayAreaProps {
   selected: string | null;
   wrong: { chipId: string; slotId: string } | null;
   popSlot: string | null;
+  celebrating: string | null;
   hintSlot: string | null;
   failedImages: ReadonlySet<string>;
   byId: Map<string, VocabWord>;
@@ -294,6 +302,7 @@ function PlayArea({
   selected,
   wrong,
   popSlot,
+  celebrating,
   hintSlot,
   failedImages,
   byId,
@@ -303,6 +312,8 @@ function PlayArea({
 }: PlayAreaProps) {
   const w = layout.cardWidth;
   const textStyle = { fontSize: m.font };
+  // Pointing at a card while a word is selected plays its picture again (counter per card).
+  const [hovers, setHovers] = useState<Readonly<Record<string, number>>>({});
 
   return (
     <div
@@ -320,6 +331,7 @@ function PlayArea({
               type="button"
               data-card={word.id}
               onClick={() => onTapSlot(word)}
+              onPointerEnter={() => selected && !isPlaced && setHovers((h) => ({ ...h, [word.id]: (h[word.id] ?? 0) + 1 }))}
               disabled={isPlaced}
               aria-label={isPlaced ? word.text : 'ضَعِ الكَلِمَةَ هُنَا'}
               style={{ width: w, height: m.height, padding: m.pad, gap: m.pad }}
@@ -337,6 +349,10 @@ function PlayArea({
                 height={m.picH}
                 emojiSize={m.emoji}
                 onError={onImageError}
+                // Plays once when the round appears (staggered), again on hover, loops while celebrating.
+                delay={hovers[word.id] ? 0 : i * 150}
+                replay={hovers[word.id] ?? 0}
+                loop={celebrating === word.id}
               />
               <span
                 style={{ height: m.slotH }}
@@ -398,6 +414,9 @@ function PictureCard({
   height,
   emojiSize,
   onError,
+  delay,
+  replay,
+  loop,
 }: {
   word: VocabWord;
   failed: boolean;
@@ -405,6 +424,9 @@ function PictureCard({
   height: number;
   emojiSize: number;
   onError: (id: string) => void;
+  delay: number;
+  replay: number;
+  loop: boolean;
 }) {
   const frame = 'w-full shrink-0 overflow-hidden rounded-2xl';
   if (word.image && !failed) {
@@ -422,9 +444,7 @@ function PictureCard({
   }
   return (
     <span role="img" aria-label={word.text} style={{ height }} className={cn(frame, pastel, 'flex items-center justify-center')}>
-      <span aria-hidden className="font-emoji leading-none" style={{ fontSize: emojiSize }}>
-        {word.emoji}
-      </span>
+      <EmojiArt emoji={word.emoji} size={Math.min(Math.round(emojiSize * 1.15), height - 8)} play loop={loop} replay={replay} delay={delay} />
     </span>
   );
 }

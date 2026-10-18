@@ -69,6 +69,16 @@ export default {
           '50%': { boxShadow: '0 0 0 14px rgba(251, 191, 36, 0.35)' },
           '100%': { boxShadow: '0 0 0 0 rgba(251, 191, 36, 0)' },
         },
+        // Gentle idle motion for static emoji art (EmojiArt).
+        sway: {
+          '0%, 100%': { transform: 'rotate(-3deg)' },
+          '50%': { transform: 'rotate(3deg)' },
+        },
+        bob: {
+          '0%, 100%': { transform: 'translateY(0) scale(1)' },
+          '40%': { transform: 'translateY(-8%) scale(1.04)' },
+          '70%': { transform: 'translateY(2%) scale(0.99)' },
+        },
         'fade-in': {
           from: { opacity: '0' },
           to: { opacity: '1' },
@@ -84,6 +94,8 @@ export default {
         wiggle: 'wiggle 0.45s ease-in-out',
         retract: 'retract 0.2s ease-in forwards',
         hint: 'hint 1.2s ease-out',
+        sway: 'sway 3s ease-in-out infinite',
+        bob: 'bob 0.9s ease-in-out both',
         'fade-in': 'fade-in 0.2s ease-out',
         'rise-in': 'rise-in 0.3s ease-out',
       },

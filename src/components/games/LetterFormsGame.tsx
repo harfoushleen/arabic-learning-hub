@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
+import { EmojiArt } from '@/components/EmojiArt';
 import { getUnit, type LetterForm, type LetterFormItem, type LetterFormPart } from '@/data/units';
 import { solveFitGrid, useFitGrid, type FitGridConfig, type FitGridLayout } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
@@ -264,6 +265,7 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
               pastel={PASTELS[index % PASTELS.length]!}
               failed={failedImages.has(item.id)}
               onError={() => setFailedImages((prev) => new Set([...prev, item.id]))}
+              complete={activeBlank < 0}
             />
             <Word
               item={item}
@@ -321,19 +323,24 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   );
 }
 
-/** Display-only picture of the word (not a drop target): the image, or the emoji if there's none. */
+/**
+ * Display-only picture of the word (not a drop target): the image, or the Noto emoji art if there's
+ * none. The art loops gently the whole time and bursts when the word is completed.
+ */
 function WordPicture({
   item,
   size,
   pastel,
   failed,
   onError,
+  complete,
 }: {
   item: LetterFormItem;
   size: number;
   pastel: string;
   failed: boolean;
   onError: () => void;
+  complete: boolean;
 }) {
   const showImage = item.image && !failed;
   return (
@@ -341,15 +348,13 @@ function WordPicture({
       data-picture={item.id}
       role="img"
       aria-label={item.target}
-      className={cn('game-piece flex shrink-0 items-center justify-center overflow-hidden rounded-3xl shadow-md', showImage ? 'bg-white' : pastel)}
+      className={cn('game-piece flex shrink-0 items-center justify-center overflow-hidden rounded-3xl shadow-md', showImage ? 'bg-white' : pastel, complete && 'animate-pop')}
       style={{ width: size, height: size }}
     >
       {showImage ? (
         <img src={item.image} alt="" draggable={false} onError={onError} className="pointer-events-none h-full w-full object-contain p-2" />
       ) : (
-        <span aria-hidden className="font-emoji leading-none" style={{ fontSize: Math.round(size * 0.55) }}>
-          {item.emoji}
-        </span>
+        <EmojiArt emoji={item.emoji} size={Math.round(size * 0.82)} play loop replay={complete} />
       )}
     </div>
   );

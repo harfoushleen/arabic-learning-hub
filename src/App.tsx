@@ -1,4 +1,5 @@
-import { Suspense, useEffect, type CSSProperties } from 'react';
+import { Suspense, useEffect, useState, type CSSProperties } from 'react';
+import { EmojiArt } from '@/components/EmojiArt';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { GameStage } from '@/components/games/GameStage';
 import { gameRegistry } from '@/components/games/registry';
@@ -128,7 +129,37 @@ function HomeScreen({ onPick }: { onPick: (unitId: string) => void }) {
           </button>
         ))}
       </section>
+
+      <Credits />
     </main>
+  );
+}
+
+/** Small footer link and panel: Noto Animated Emoji is CC BY 4.0, which needs visible attribution. */
+function Credits() {
+  const [open, setOpen] = useState(false);
+  return (
+    <footer className="mt-10 flex flex-col items-center gap-3 font-sans text-sm text-muted" dir="ltr">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="min-h-[48px] px-4 underline decoration-dotted underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink"
+      >
+        credits
+      </button>
+      {open && (
+        <div data-credits className="max-w-xl rounded-card-md bg-white/80 px-5 py-4 text-start font-normal leading-relaxed shadow-card">
+          <p>
+            Emoji art: <a className="underline" href="https://github.com/googlefonts/noto-emoji">Noto Emoji</a> by Google,
+            Apache License 2.0. Animated emoji:{' '}
+            <a className="underline" href="https://googlefonts.github.io/noto-emoji-animation/">Noto Animated Emoji</a> by
+            Google, <a className="underline" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+          </p>
+          <p className="mt-2">Scene illustrations: from the class textbook, supplied by the teacher for classroom use.</p>
+        </div>
+      )}
+    </footer>
   );
 }
 
@@ -174,10 +205,11 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
             >
               <span
                 aria-hidden
-                className="flex aspect-square shrink-0 items-center justify-center rounded-full bg-white/80 font-emoji leading-none"
-                style={{ width: vh(52, 0.09, 112), fontSize: vh(28, 0.047, 58) }}
+                className="flex aspect-square shrink-0 items-center justify-center rounded-full bg-white/80"
+                style={{ width: vh(52, 0.09, 112) }}
               >
-                {game.emoji}
+                {/* Plays once on load, then stays static. */}
+                <EmojiArt emoji={game.emoji} size={vh(30, 0.052, 64)} play />
               </span>
               <span className="text-vowelled" style={{ fontSize: vh(20, 0.036, 26) }}>
                 {game.title}

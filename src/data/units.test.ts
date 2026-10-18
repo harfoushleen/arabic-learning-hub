@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { emojiCodepoints } from '../lib/emoji';
 import { getUnit, units } from './units';
 
 const publicDir = fileURLToPath(new URL('../../public/', import.meta.url));
@@ -80,5 +81,11 @@ describe('units data', () => {
       .filter((p): p is string => p !== undefined)
       .filter((p) => !p.startsWith('/') || !existsSync(publicDir + p.slice(1)));
     expect(missing).toEqual([]);
+  });
+
+  it('every emoji in units.ts has at least a static Noto SVG in public/emoji/', () => {
+    const emoji = units.flatMap((u) => [...u.vocab.map((w) => w.emoji), ...u.letterForms.map((f) => f.emoji), ...u.games.map((g) => g.emoji)]);
+    const missing = [...new Set(emoji)].filter((e) => !existsSync(`${publicDir}emoji/${emojiCodepoints(e)}.svg`));
+    expect(missing, 'run: node scripts/fetch-emoji-assets.mjs').toEqual([]);
   });
 });
