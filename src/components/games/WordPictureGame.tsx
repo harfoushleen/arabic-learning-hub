@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { getUnit, type VocabWord } from '@/data/units';
+import { useFitGrid } from '@/hooks/useFitGrid';
+import { useFontsReady } from '@/hooks/useFontsReady';
 import { buildRounds, starsFor } from '@/lib/rounds';
 import { cn, prefersReducedMotion, shuffle } from '@/lib/utils';
+import { BigButton } from './BigButton';
+import { GameStage } from './GameStage';
 import type { GameProps } from './types';
 
 const PASTELS = ['bg-pastel-blue', 'bg-pastel-pink', 'bg-pastel-mint', 'bg-pastel-yellow', 'bg-pastel-lilac', 'bg-pastel-peach'];
@@ -11,14 +15,56 @@ const POP_MS = 600;
 const HINT_MS = 1300;
 const ROUND_DONE_DELAY_MS = 650;
 
-const LG_COLS: Record<number, string> = {
-  1: 'lg:grid-cols-1',
-  2: 'lg:grid-cols-2',
-  3: 'lg:grid-cols-3',
-  4: 'lg:grid-cols-4',
-  5: 'lg:grid-cols-3',
-  6: 'lg:grid-cols-3',
-};
+// Layout (px). Everything else scales from the fitted card width.
+const GAP = 16;
+const INSET = 8; // room for the placed-card glow and the lifted chip
+const BANK_GAP = 12;
+const MIN_CARD = 140;
+const MAX_CARD = 320;
+const MIN_CHIP_H = 56;
+const MIN_TEXT = 28;
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/** Sizes of one card (picture + slot) and of the matching chips, for a card `w` px wide. */
+function cardMetrics(w: number) {
+  const pad = Math.round(clamp(w * 0.045, 6, 14));
+  const picH = Math.round((w - 2 * pad) * 0.72);
+  const slotH = Math.round(clamp(w * 0.3, MIN_CHIP_H, 96));
+  const font = Math.round(clamp(slotH * 0.5, MIN_TEXT, 48));
+  return { pad, picH, slotH, font, emoji: Math.round(w * 0.55), height: 2 * pad + picH + pad + slotH };
+}
+type CardMetrics = ReturnType<typeof cardMetrics>;
+
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function textWidth(text: string, fontPx: number): number {
+  measureCtx ??= document.createElement('canvas').getContext('2d');
+  if (!measureCtx) return text.length * fontPx * 0.6;
+  measureCtx.font = `700 ${fontPx}px Cairo, sans-serif`;
+  return measureCtx.measureText(text).width;
+}
+
+/** Chips get an explicit width so the bank wraps exactly as calculated. */
+function chipWidth(text: string, m: CardMetrics): number {
+  const padX = Math.round(m.font * 0.6);
+  return Math.max(m.slotH, Math.ceil(textWidth(text, m.font) * 1.06) + 2 * padX + 4);
+}
+
+/** Bank height for these words; one row if they fit, otherwise as many as flex-wrap makes. */
+function bankHeight(words: readonly VocabWord[], m: CardMetrics, areaWidth: number): number {
+  let rows = 1;
+  let x = 0;
+  for (const word of words) {
+    const w = chipWidth(word.text, m);
+    if (x > 0 && x + BANK_GAP + w > areaWidth) {
+      rows++;
+      x = w;
+    } else {
+      x += (x > 0 ? BANK_GAP : 0) + w;
+    }
+  }
+  return rows * m.slotH + (rows - 1) * BANK_GAP;
+}
 
 export default function WordPictureGame({ unitId, onExit }: GameProps) {
   const [sessionKey, setSessionKey] = useState(0);
@@ -26,12 +72,17 @@ export default function WordPictureGame({ unitId, onExit }: GameProps) {
   const game = unit?.games.find((g) => g.id === 'word-picture');
 
   if (!unit || !game) {
-    return <p className="p-8 text-center font-cairo text-3xl">لَا تُوجَدُ كَلِمَاتٌ</p>;
+    return (
+      <GameStage onClose={onExit}>
+        <p className="p-8 text-center font-cairo text-3xl">لَا تُوجَدُ كَلِمَاتٌ</p>
+      </GameStage>
+    );
   }
   return (
     <Session
       key={sessionKey}
       words={unit.vocab}
+      title={game.title}
       instruction={game.instruction}
       onRestart={() => setSessionKey((k) => k + 1)}
       onExit={onExit}
@@ -48,12 +99,13 @@ type Phase = 'playing' | 'round-complete' | 'finished';
 
 interface SessionProps {
   words: VocabWord[];
+  title: string;
   instruction: string;
   onRestart: () => void;
   onExit?: () => void;
 }
 
-function Session({ words, instruction, onRestart, onExit }: SessionProps) {
+function Session({ words, title, instruction, onRestart, onExit }: SessionProps) {
   const [rounds] = useState<Round[]>(() =>
     buildRounds(words).map((r) => ({ words: r, bank: shuffle(r.map((w) => w.id)) })),
   );
@@ -68,9 +120,21 @@ function Session({ words, instruction, onRestart, onExit }: SessionProps) {
   const [failedImages, setFailedImages] = useState<ReadonlySet<string>>(() => new Set());
   const [readyRound, setReadyRound] = useState(-1);
   const later = useTimers();
+  useFontsReady(); // re-measure chip text once Cairo is loaded
 
   const round = rounds[roundIndex]!;
   const byId = new Map(words.map((w) => [w.id, w]));
+  const bankWords = round.bank.map((id) => byId.get(id)!);
+
+  const fit = useFitGrid({
+    count: round.words.length,
+    gap: GAP,
+    inset: INSET,
+    minWidth: MIN_CARD,
+    maxWidth: MAX_CARD,
+    cardHeight: (w) => cardMetrics(w).height,
+    reserveHeight: (w, areaWidth) => GAP + bankHeight(bankWords, cardMetrics(w), areaWidth - 2 * INSET),
+  });
 
   // Decode the round's images before showing it, so pictures never pop in mid-round.
   useEffect(() => {
@@ -141,121 +205,183 @@ function Session({ words, instruction, onRestart, onExit }: SessionProps) {
     setPhase('playing');
   }
 
-  if (phase === 'finished') {
+  const finished = phase === 'finished';
+  const layout = fit.layout;
+  const showPlay = !finished && layout !== null && readyRound === roundIndex;
+
+  let overlay = null;
+  if (finished) {
     const stars = starsFor(words.length - Object.keys(misses).length, words.length);
-    return <FinalScreen stars={stars} onRestart={onRestart} onExit={onExit} />;
+    overlay = <FinalScreen stars={stars} onRestart={onRestart} onExit={onExit} />;
+  } else if (phase === 'round-complete') {
+    overlay = (
+      <div className="flex animate-rise-in flex-col items-center gap-[clamp(12px,calc(var(--app-h,100dvh)*0.04),32px)] rounded-[2rem] bg-white px-10 py-[clamp(12px,calc(var(--app-h,100dvh)*0.04),40px)] shadow-xl">
+        <p className="font-cairo text-[clamp(28px,calc(var(--app-h,100dvh)*0.07),64px)] font-extrabold leading-[1.5]" role="status">
+          أَحْسَنْتَ! 🌟
+        </p>
+        <BigButton onClick={nextRound} autoFocus>
+          التَّالِي
+        </BigButton>
+      </div>
+    );
   }
 
-  const ready = readyRound === roundIndex;
+  return (
+    <GameStage
+      title={title}
+      instruction={instruction}
+      progress={{ total: rounds.length, current: finished ? rounds.length : roundIndex }}
+      onClose={onExit}
+      playAreaRef={fit.ref}
+      scrollable={showPlay && !layout.fits}
+      rotateHint={showPlay && !layout.fits && fit.fitsRotated}
+      overlay={overlay}
+      overlayOpaque={finished}
+    >
+      {showPlay && (
+        <PlayArea
+          layout={layout}
+          metrics={cardMetrics(layout.cardWidth)}
+          bankHeight={bankHeight(bankWords, cardMetrics(layout.cardWidth), (fit.area?.width ?? 0) - 2 * INSET)}
+          round={round}
+          bankWords={bankWords}
+          placed={placed}
+          selected={selected}
+          wrong={wrong}
+          popSlot={popSlot}
+          hintSlot={hintSlot}
+          failedImages={failedImages}
+          byId={byId}
+          onTapSlot={tapSlot}
+          onTapChip={tapChip}
+          onImageError={markImageFailed}
+        />
+      )}
+    </GameStage>
+  );
+}
+
+interface PlayAreaProps {
+  layout: NonNullable<ReturnType<typeof useFitGrid>['layout']>;
+  metrics: CardMetrics;
+  bankHeight: number;
+  round: Round;
+  bankWords: VocabWord[];
+  placed: ReadonlySet<string>;
+  selected: string | null;
+  wrong: { chipId: string; slotId: string } | null;
+  popSlot: string | null;
+  hintSlot: string | null;
+  failedImages: ReadonlySet<string>;
+  byId: Map<string, VocabWord>;
+  onTapSlot: (word: VocabWord) => void;
+  onTapChip: (id: string) => void;
+  onImageError: (id: string) => void;
+}
+
+function PlayArea({
+  layout,
+  metrics: m,
+  bankHeight: bankH,
+  round,
+  bankWords,
+  placed,
+  selected,
+  wrong,
+  popSlot,
+  hintSlot,
+  failedImages,
+  byId,
+  onTapSlot,
+  onTapChip,
+  onImageError,
+}: PlayAreaProps) {
+  const w = layout.cardWidth;
+  const textStyle = { fontSize: m.font };
 
   return (
-    <div className="relative flex h-full flex-col gap-4 overflow-y-auto overscroll-none p-4 sm:p-6 3xl:gap-8 3xl:p-10">
-      <header className="flex flex-col items-center gap-3 px-16 sm:px-20">
-        <h2 className="text-center font-cairo text-[28px] font-bold leading-[1.7] md:text-[32px] 3xl:text-[44px]">
-          {instruction}
-        </h2>
-        <ProgressDots total={rounds.length} current={roundIndex} />
-      </header>
-
-      {ready ? (
-        <>
-          <div
-            className={cn(
-              'mx-auto grid w-full grid-cols-2 gap-4 lg:gap-6 3xl:gap-8',
-              LG_COLS[round.words.length] ?? 'lg:grid-cols-4',
-              round.words.length <= 3 ? 'max-w-5xl 3xl:max-w-7xl' : 'max-w-7xl 3xl:max-w-[1800px]',
-            )}
-          >
-            {round.words.map((word, i) => {
-              const isPlaced = placed.has(word.id);
-              const wrongHere = wrong?.slotId === word.id ? byId.get(wrong.chipId) : undefined;
-              return (
-                <button
-                  key={word.id}
-                  type="button"
-                  onClick={() => tapSlot(word)}
-                  disabled={isPlaced}
-                  aria-label={isPlaced ? word.text : 'ضَعِ الكَلِمَةَ هُنَا'}
-                  className={cn(
-                    'game-piece flex min-w-[160px] flex-col gap-3 rounded-3xl bg-white p-3 text-start shadow-md transition-[box-shadow,background-color] duration-300 3xl:p-4',
-                    isPlaced && 'bg-emerald-50 shadow-[0_0_0_4px_rgb(110_231_183),0_8px_28px_rgba(16,185,129,0.25)]',
-                    popSlot === word.id && 'animate-pop',
-                    hintSlot === word.id && 'animate-hint',
-                  )}
-                >
-                  <PictureCard
-                    word={word}
-                    failed={failedImages.has(word.id)}
-                    pastel={PASTELS[i % PASTELS.length]!}
-                    onError={markImageFailed}
-                  />
-                  <span
-                    className={cn(
-                      'flex min-h-[84px] w-full items-center justify-center rounded-2xl border-[3px] border-dashed px-2 transition-colors 3xl:min-h-[104px]',
-                      isPlaced
-                        ? 'border-transparent bg-white/70'
-                        : selected
-                          ? 'border-amber-400 bg-amber-50/60'
-                          : 'border-slate-300 bg-slate-50/60',
-                    )}
-                  >
-                    {isPlaced ? (
-                      <span className="font-cairo text-[36px] font-bold leading-[1.6] text-emerald-800 3xl:text-[48px]">
-                        {word.text}
-                      </span>
-                    ) : wrongHere ? (
-                      <span className="animate-shake rounded-2xl bg-white px-5 font-cairo text-[36px] font-bold leading-[1.6] shadow 3xl:text-[48px]">
-                        {wrongHere.text}
-                      </span>
-                    ) : null}
+    <div
+      className={cn('flex min-h-full flex-col items-center', layout.fits ? 'justify-center' : 'justify-start')}
+      style={{ gap: GAP, padding: INSET }}
+      data-fit={`${layout.cols}x${layout.rows} w=${w} fits=${layout.fits}`}
+    >
+      <div className="grid justify-center" style={{ gridTemplateColumns: `repeat(${layout.cols}, ${w}px)`, gap: GAP }}>
+        {round.words.map((word, i) => {
+          const isPlaced = placed.has(word.id);
+          const wrongHere = wrong?.slotId === word.id ? byId.get(wrong.chipId) : undefined;
+          return (
+            <button
+              key={word.id}
+              type="button"
+              data-card={word.id}
+              onClick={() => onTapSlot(word)}
+              disabled={isPlaced}
+              aria-label={isPlaced ? word.text : 'ضَعِ الكَلِمَةَ هُنَا'}
+              style={{ width: w, height: m.height, padding: m.pad, gap: m.pad }}
+              className={cn(
+                'game-piece flex flex-col rounded-3xl bg-white text-start shadow-md transition-[box-shadow,background-color] duration-300',
+                isPlaced && 'bg-emerald-50 shadow-[0_0_0_4px_rgb(110_231_183),0_8px_28px_rgba(16,185,129,0.25)]',
+                popSlot === word.id && 'animate-pop',
+                hintSlot === word.id && 'animate-hint',
+              )}
+            >
+              <PictureCard
+                word={word}
+                failed={failedImages.has(word.id)}
+                pastel={PASTELS[i % PASTELS.length]!}
+                height={m.picH}
+                emojiSize={m.emoji}
+                onError={onImageError}
+              />
+              <span
+                style={{ height: m.slotH }}
+                className={cn(
+                  'flex w-full shrink-0 items-center justify-center overflow-hidden rounded-2xl border-[3px] border-dashed px-1 transition-colors',
+                  isPlaced
+                    ? 'border-transparent bg-white/70'
+                    : selected
+                      ? 'border-amber-400 bg-amber-50/60'
+                      : 'border-slate-300 bg-slate-50/60',
+                )}
+              >
+                {isPlaced ? (
+                  <span style={textStyle} className="font-cairo font-bold leading-[1.6] text-emerald-800">
+                    {word.text}
                   </span>
-                </button>
-              );
-            })}
-          </div>
+                ) : wrongHere ? (
+                  <span style={textStyle} className="animate-shake rounded-2xl bg-white px-4 font-cairo font-bold leading-[1.6] shadow">
+                    {wrongHere.text}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
-          <div className="mx-auto flex w-full max-w-6xl flex-wrap justify-center gap-4 pb-2 pt-2 3xl:max-w-[1600px] 3xl:gap-6">
-            {round.bank.map((id) => {
-              const word = byId.get(id)!;
-              if (placed.has(id)) return null;
-              const isSelected = selected === id;
-              const inFlight = wrong?.chipId === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => tapChip(id)}
-                  aria-pressed={isSelected}
-                  className={cn(
-                    'game-piece min-h-[72px] min-w-[120px] rounded-2xl border-2 border-white bg-white px-6 font-cairo text-[36px] font-bold leading-[1.6] shadow-md transition-transform duration-200 3xl:min-h-[92px] 3xl:px-8 3xl:text-[48px]',
-                    isSelected && '-translate-y-2 scale-105 border-amber-300 bg-pastel-yellow shadow-xl',
-                    inFlight && 'invisible',
-                  )}
-                >
-                  {word.text}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        <div className="flex flex-1 items-center justify-center text-6xl" aria-hidden>
-          ⏳
-        </div>
-      )}
-
-      {phase === 'round-complete' && (
-        <div className="absolute inset-0 z-10 flex animate-fade-in items-center justify-center bg-cream/80 p-6">
-          <div className="flex animate-rise-in flex-col items-center gap-8 rounded-[2rem] bg-white px-12 py-10 shadow-xl">
-            <p className="font-cairo text-[48px] font-extrabold leading-[1.6] 3xl:text-[64px]" role="status">
-              أَحْسَنْتَ! 🌟
-            </p>
-            <BigButton onClick={nextRound} autoFocus>
-              التَّالِي
-            </BigButton>
-          </div>
-        </div>
-      )}
+      <div className="flex w-full flex-wrap content-start justify-center" style={{ gap: BANK_GAP, height: bankH }}>
+        {bankWords.map((word) => {
+          if (placed.has(word.id)) return null;
+          const isSelected = selected === word.id;
+          return (
+            <button
+              key={word.id}
+              type="button"
+              data-chip={word.id}
+              onClick={() => onTapChip(word.id)}
+              aria-pressed={isSelected}
+              style={{ width: chipWidth(word.text, m), height: m.slotH, ...textStyle }}
+              className={cn(
+                'game-piece flex items-center justify-center rounded-2xl border-2 border-white bg-white font-cairo font-bold leading-[1.6] shadow-md transition-transform duration-200',
+                isSelected && '-translate-y-2 scale-105 border-amber-300 bg-pastel-yellow shadow-xl',
+                wrong?.chipId === word.id && 'invisible',
+              )}
+            >
+              {word.text}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -264,18 +390,21 @@ function PictureCard({
   word,
   failed,
   pastel,
+  height,
+  emojiSize,
   onError,
 }: {
   word: VocabWord;
   failed: boolean;
   pastel: string;
+  height: number;
+  emojiSize: number;
   onError: (id: string) => void;
 }) {
-  const frame =
-    'h-[clamp(160px,20vh,300px)] w-full overflow-hidden rounded-2xl lg:h-[clamp(160px,30vh,320px)] 3xl:h-[clamp(220px,32vh,420px)]';
+  const frame = 'w-full shrink-0 overflow-hidden rounded-2xl';
   if (word.image && !failed) {
     return (
-      <span className={cn(frame, 'block bg-white')}>
+      <span className={cn(frame, 'block bg-white')} style={{ height }}>
         <img
           src={word.image}
           alt={word.text}
@@ -287,29 +416,11 @@ function PictureCard({
     );
   }
   return (
-    <span role="img" aria-label={word.text} className={cn(frame, pastel, 'flex items-center justify-center')}>
-      <span aria-hidden className="text-[110px] leading-none 3xl:text-[150px]">
+    <span role="img" aria-label={word.text} style={{ height }} className={cn(frame, pastel, 'flex items-center justify-center')}>
+      <span aria-hidden className="leading-none" style={{ fontSize: emojiSize }}>
         {word.emoji}
       </span>
     </span>
-  );
-}
-
-function ProgressDots({ total, current }: { total: number; current: number }) {
-  return (
-    <ol className="flex items-center gap-3" aria-label={`الجَوْلَةُ ${current + 1} مِنْ ${total}`}>
-      {Array.from({ length: total }, (_, i) => (
-        <li
-          key={i}
-          className={cn(
-            'h-4 w-4 rounded-full transition-all duration-300 3xl:h-5 3xl:w-5',
-            i < current && 'bg-emerald-400',
-            i === current && 'w-8 bg-amber-400 3xl:w-10',
-            i > current && 'bg-slate-200',
-          )}
-        />
-      ))}
-    </ol>
   );
 }
 
@@ -326,21 +437,27 @@ function FinalScreen({
     if (stars === 3) celebrate();
   }, [stars]);
 
+  // Sized from the visible height so it always fits inside the stage.
   return (
-    <div className="flex h-full animate-fade-in flex-col items-center justify-center gap-10 p-6">
-      <p className="font-cairo text-[48px] font-extrabold leading-[1.6] 3xl:text-[64px]">أَحْسَنْتَ! 🌟</p>
+    <div className="flex flex-col items-center gap-[clamp(12px,calc(var(--app-h,100dvh)*0.04),40px)]">
+      <p className="font-cairo text-[clamp(28px,calc(var(--app-h,100dvh)*0.07),64px)] font-extrabold leading-[1.5]">
+        أَحْسَنْتَ! 🌟
+      </p>
       <div className="flex gap-4" role="img" aria-label={`${stars} / 3`}>
         {[1, 2, 3].map((n) => (
           <span
             key={n}
             aria-hidden
-            className={cn('text-[88px] leading-none 3xl:text-[120px]', n > stars && 'opacity-25 grayscale')}
+            className={cn(
+              'text-[clamp(40px,calc(var(--app-h,100dvh)*0.12),120px)] leading-none',
+              n > stars && 'opacity-25 grayscale',
+            )}
           >
             ⭐
           </span>
         ))}
       </div>
-      <div className="flex flex-wrap justify-center gap-6">
+      <div className="flex flex-wrap justify-center gap-4">
         <BigButton onClick={onRestart} autoFocus>
           أَعِدِ اللُّعْبَةَ
         </BigButton>
@@ -351,24 +468,6 @@ function FinalScreen({
         )}
       </div>
     </div>
-  );
-}
-
-function BigButton({
-  variant = 'primary',
-  className,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' }) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        'game-piece min-h-[64px] min-w-[160px] rounded-2xl px-8 font-cairo text-[32px] font-bold leading-[1.6] shadow-md transition-transform active:scale-95',
-        variant === 'primary' ? 'bg-emerald-300 text-emerald-950' : 'bg-pastel-lilac text-ink',
-        className,
-      )}
-      {...props}
-    />
   );
 }
 

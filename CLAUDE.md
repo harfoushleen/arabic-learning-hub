@@ -34,6 +34,8 @@ Fonts: Cairo (UI/headings), Tajawal (body). Pastel palette; background #FBF7EF.
 
 - Respect `prefers-reduced-motion`.
 
+- No scrolling inside a game at any supported viewport (phones excepted). Every game renders inside GameStage and sizes its pieces with useFitGrid or a similar fit hook. `npm run test:e2e` must pass.
+
 
 
 ## Arabic letter joining (critical)

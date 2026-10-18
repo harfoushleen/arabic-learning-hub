@@ -33,9 +33,27 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  html.scroll-locked,
+  html.scroll-locked body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   #active-game-container {
     height: 100%;
     min-height: 0;
+    overflow: hidden;
+  }
+}
+
+@layer utilities {
+  /* Real visible height (set from visualViewport in appHeight.ts). Never 100vh: iOS sizes it
+     against the viewport with the browser bars hidden. */
+  .h-app {
+    height: var(--app-h, 100dvh);
+  }
+  .min-h-app {
+    min-height: var(--app-h, 100dvh);
   }
 }
 

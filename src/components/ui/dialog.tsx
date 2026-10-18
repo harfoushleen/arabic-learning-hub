@@ -5,34 +5,22 @@ import { cn } from '@/lib/utils';
 export const Dialog = DialogPrimitive.Root;
 export const DialogTitle = DialogPrimitive.Title;
 
-/** Full-screen on touch devices (iPad), near full-screen on mouse/trackpad desktops. */
-export function DialogContent({
-  className,
-  children,
-  closeLabel = 'إِغْلَاق',
-  ...props
-}: ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { closeLabel?: string }) {
+/**
+ * Full screen on every device, exactly the visible height (--app-h), with no inset or padding.
+ * The close button lives in GameStage's header.
+ */
+export function DialogContent({ className, children, ...props }: ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 animate-fade-in bg-ink/40" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-cream" />
       <DialogPrimitive.Content
         className={cn(
-          'fixed inset-0 z-50 flex animate-fade-in flex-col overflow-hidden bg-cream outline-none',
-          'pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]',
-          'desktop:inset-4 desktop:rounded-[2rem] desktop:shadow-2xl',
+          'h-app fixed inset-x-0 top-0 z-50 animate-fade-in overflow-hidden overscroll-none bg-cream outline-none',
           className,
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close
-          aria-label={closeLabel}
-          className="game-piece absolute left-3 top-3 z-20 mt-[env(safe-area-inset-top)] flex h-16 w-16 items-center justify-center rounded-full bg-white text-ink shadow-md transition-transform active:scale-95"
-        >
-          <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );

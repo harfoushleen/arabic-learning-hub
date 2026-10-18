@@ -7,8 +7,6 @@ export default {
     extend: {
       screens: {
         '3xl': '1600px',
-        // Mouse/trackpad devices (laptops, classroom PCs) — iPads never match.
-        desktop: { raw: '(hover: hover) and (pointer: fine) and (min-width: 1024px)' },
       },
       fontFamily: {
         cairo: ['Cairo', ...defaultTheme.fontFamily.sans],

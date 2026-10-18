@@ -1,5 +1,6 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { GameStage } from '@/components/games/GameStage';
 import { gameRegistry } from '@/components/games/registry';
 import { getUnit, units, type GameId, type Unit } from '@/data/units';
 
@@ -9,16 +10,24 @@ export default function App() {
   const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
   const [activeGameId, setActiveGameId] = useState<GameId | null>(null);
   const activeUnit = activeUnitId ? getUnit(activeUnitId) : undefined;
+  const gameOpen = activeUnit !== undefined && activeGameId !== null;
+
+  // Lock page scroll (incl. iOS rubber-banding) while a game is open.
+  useEffect(() => {
+    if (!gameOpen) return;
+    document.documentElement.classList.add('scroll-locked');
+    return () => document.documentElement.classList.remove('scroll-locked');
+  }, [gameOpen]);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-4 py-8 sm:px-8 3xl:max-w-[1600px]">
+    <main className="min-h-app mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 sm:px-8 3xl:max-w-[1600px]">
       {activeUnit ? (
         <UnitView unit={activeUnit} onBack={() => setActiveUnitId(null)} onPlay={setActiveGameId} />
       ) : (
         <UnitList onPick={setActiveUnitId} />
       )}
 
-      <Dialog open={activeUnit !== undefined && activeGameId !== null} onOpenChange={(open) => !open && setActiveGameId(null)}>
+      <Dialog open={gameOpen} onOpenChange={(open) => !open && setActiveGameId(null)}>
         {activeUnit && activeGameId && (
           <GameDialog unit={activeUnit} gameId={activeGameId} onClose={() => setActiveGameId(null)} />
         )}
@@ -36,6 +45,7 @@ function UnitList({ onPick }: { onPick: (id: string) => void }) {
           <button
             key={unit.id}
             type="button"
+            data-unit-card={unit.id}
             onClick={() => onPick(unit.id)}
             style={{ backgroundColor: unit.color }}
             className="game-piece flex min-h-[200px] w-full flex-col sm:w-[420px] items-center justify-center gap-4 rounded-[2rem] p-6 shadow-md transition-transform active:scale-[0.98]"
@@ -74,6 +84,7 @@ function UnitView({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; on
           <button
             key={game.id}
             type="button"
+            data-game-card={game.id}
             onClick={() => onPlay(game.id)}
             className={`game-piece flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-[2rem] p-6 shadow-md transition-transform active:scale-[0.98] ${GAME_CARD_COLORS[i % GAME_CARD_COLORS.length]}`}
           >
@@ -94,7 +105,13 @@ function GameDialog({ unit, gameId, onClose }: { unit: Unit; gameId: GameId; onC
   return (
     <DialogContent aria-describedby={undefined}>
       <DialogTitle className="sr-only">{title}</DialogTitle>
-      <Suspense fallback={<div className="flex h-full items-center justify-center text-6xl">⏳</div>}>
+      <Suspense
+        fallback={
+          <GameStage onClose={onClose}>
+            <div className="flex h-full items-center justify-center text-6xl">⏳</div>
+          </GameStage>
+        }
+      >
         <div id="active-game-container" data-game={gameId} data-unit={unit.id}>
           <Game unitId={unit.id} onExit={onClose} />
         </div>
