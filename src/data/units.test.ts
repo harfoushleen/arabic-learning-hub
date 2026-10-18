@@ -47,6 +47,12 @@ describe('units data', () => {
     },
   );
 
+  it('keeps look-alike words apart', () => {
+    const vocab = getUnit('unit-1')!.vocab;
+    const pairs = vocab.flatMap((w) => (w.confusableWith ?? []).map((o) => [w.id, o].sort().join('|')));
+    expect(new Set(pairs)).toEqual(new Set(['ab|razi', 'barud|kalb', 'zahra|zara']));
+  });
+
   it('every image/audio path exists under public/', () => {
     const paths = units.flatMap((u) => [
       ...u.vocab.flatMap((w) => [w.image, w.audio]),

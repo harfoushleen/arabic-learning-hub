@@ -33,12 +33,12 @@ export interface Unit {
 const unit1Vocab: VocabWord[] = [
   { id: 'razi', text: 'رَازِي', emoji: '👦', confusableWith: ['ab'] },
   { id: 'zizi', text: 'زِيزِي', emoji: '👧' },
-  { id: 'zara', text: 'زَارَ', emoji: '🫂' },
+  { id: 'zara', text: 'زَارَ', emoji: '👋', image: '/images/unit-1/zara.jpg', confusableWith: ['zahra'] },
   { id: 'bayt', text: 'بَيْت', emoji: '🏠' },
   { id: 'sharaha', text: 'شَرَحَ', emoji: '🧑‍🏫' },
   { id: 'arza', text: 'أَرْزَة', emoji: '🌲' },
   { id: 'mawza', text: 'مَوْزَة', emoji: '🍌' },
-  { id: 'zahra', text: 'زَهْرَة', emoji: '🌷' },
+  { id: 'zahra', text: 'زَهْرَة', emoji: '🌷', confusableWith: ['zara'] },
   { id: 'darz', text: 'دَرْز', emoji: '🪡' },
   { id: 'kalb', text: 'كَلْب', emoji: '🐕', confusableWith: ['barud'] },
   // Barud is the dog's name.
@@ -47,10 +47,10 @@ const unit1Vocab: VocabWord[] = [
   { id: 'tabl', text: 'طَبْل', emoji: '🥁' },
   { id: 'zabib', text: 'زَبِيب', emoji: '🍇' },
   { id: 'barid', text: 'بَارِد', emoji: '🥶' },
-  { id: 'duroob', text: 'دُرُوب', emoji: '🥾' },
+  { id: 'duroob', text: 'دُرُوب', emoji: '🛣️' },
   { id: 'arnab', text: 'أَرْنَب', emoji: '🐇' },
-  { id: 'ab', text: 'أَب', emoji: '👨', confusableWith: ['razi'] },
-  { id: 'laiba', text: 'لَعِبَ', emoji: '🤸' },
+  { id: 'ab', text: 'أَب', emoji: '👨‍👦', confusableWith: ['razi'] },
+  { id: 'laiba', text: 'لَعِبَ', emoji: '🤸', image: '/images/unit-1/laiba.png' },
 ];
 
 export const units: Unit[] = [

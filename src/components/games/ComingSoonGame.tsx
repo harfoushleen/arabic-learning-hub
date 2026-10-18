@@ -7,7 +7,7 @@ export default function ComingSoonGame({ onExit }: GameProps) {
   return (
     <GameStage onClose={onExit}>
       <div className="flex h-full flex-col items-center justify-center gap-8">
-        <p className="font-cairo text-[clamp(28px,calc(var(--app-h,100dvh)*0.07),56px)] font-extrabold leading-[1.6]">
+        <p className="text-vowelled text-[clamp(28px,calc(var(--app-h,100dvh)*0.07),56px)]">
           قَرِيبًا 🚧
         </p>
         {onExit && (

@@ -15,7 +15,7 @@
   }
 
   body {
-    @apply bg-cream font-tajawal text-ink antialiased;
+    @apply bg-cream font-naskh font-bold text-ink antialiased;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
@@ -25,7 +25,7 @@
   h2,
   h3,
   button {
-    @apply font-cairo;
+    @apply font-naskh;
   }
 
   button {
@@ -58,6 +58,15 @@
 }
 
 @layer components {
+  /* All vowelled Arabic: Naskh places stacked marks (shadda + haraka) clear of tall letters.
+     Only weight 700 is loaded; 1.8 line-height keeps marks inside the line box. */
+  .text-vowelled {
+    font-family: 'Noto Naskh Arabic', serif;
+    font-weight: 700;
+    line-height: 1.8;
+    letter-spacing: 0;
+  }
+
   /* Anything a child taps during a game: no selection, callout, or tap flash. */
   .game-piece {
     -webkit-user-select: none;

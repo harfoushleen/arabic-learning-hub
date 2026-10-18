@@ -1,4 +1,4 @@
-import { shuffle } from './utils';
+import { shuffle } from './shuffle';
 
 interface Confusable {
   id: string;

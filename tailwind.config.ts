@@ -10,7 +10,9 @@ export default {
       },
       fontFamily: {
         cairo: ['Cairo', ...defaultTheme.fontFamily.sans],
-        tajawal: ['Tajawal', ...defaultTheme.fontFamily.sans],
+        naskh: ['"Noto Naskh Arabic"', ...defaultTheme.fontFamily.serif],
+        // Emoji must not inherit Naskh's tall line metrics, or they shift out of their boxes.
+        emoji: ['"Apple Color Emoji"', '"Segoe UI Emoji"', '"Noto Color Emoji"', 'sans-serif'],
       },
       colors: {
         cream: '#FBF7EF',

@@ -39,7 +39,7 @@ export function GameStage({
       <header className="flex h-16 shrink-0 items-center gap-3">
         <div className="min-w-0 flex-1">
           {title && (
-            <p className="hidden truncate font-cairo text-[22px] font-bold leading-[1.6] text-ink/60 sm:block 3xl:text-[28px]">
+            <p className="hidden truncate text-vowelled text-[22px] text-ink/60 sm:block 3xl:text-[28px]">
               {title}
             </p>
           )}
@@ -65,7 +65,7 @@ export function GameStage({
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         {instruction && (
-          <h2 className="shrink-0 pb-2 text-center font-cairo text-[28px] font-bold leading-[1.6] md:text-[32px] 3xl:text-[44px]">
+          <h2 className="shrink-0 pb-2 text-center text-vowelled text-[28px] md:text-[32px] 3xl:text-[44px]">
             {instruction}
           </h2>
         )}
@@ -79,7 +79,7 @@ export function GameStage({
 
         {rotateHint && (
           <div className="pointer-events-none absolute inset-x-0 bottom-2 z-[5] flex justify-center">
-            <span className="animate-fade-in rounded-full bg-white px-5 py-1 font-cairo text-[22px] font-bold leading-[1.6] shadow-md">
+            <span className="animate-fade-in rounded-full bg-white px-5 py-1 text-vowelled text-[22px] shadow-md">
               أَدِرِ الجِهَازَ 🔄
             </span>
           </div>
