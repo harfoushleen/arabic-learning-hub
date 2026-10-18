@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { getUnit, type LetterForm, type LetterFormItem, type LetterFormPart } from '@/data/units';
-import { useFitGrid } from '@/hooks/useFitGrid';
+import { solveFitGrid, useFitGrid, type FitGridConfig } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { useTimers } from '@/hooks/useTimers';
 import { TATWEEL, worksheetSegments, ZWJ } from '@/lib/arabicJoining';
@@ -63,6 +63,10 @@ function wordFont(item: LetterFormItem, tile: number, areaWidth: number): number
 /** Height reserved for the word: one line of text or a blank box, whichever is taller, plus room for marks. */
 const wordBlockHeight = (font: number) => Math.max(Math.ceil(font * LINE), blankBox(font).height) + 16;
 
+/** Square picture card above the word, scaled with the tiles. */
+const pictureSize = (tile: number) => Math.round(clamp(tile * 0.85, 64, 180));
+const PASTELS = ['bg-pastel-blue', 'bg-pastel-pink', 'bg-pastel-mint', 'bg-pastel-yellow', 'bg-pastel-lilac', 'bg-pastel-peach'];
+
 export default function LetterFormsGame({ unitId, onExit }: GameProps) {
   const [session, setSession] = useState<{ key: number; previous: string[] | null }>({ key: 0, previous: null });
   const unit = getUnit(unitId);
@@ -113,6 +117,7 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   const [wiggleTile, setWiggleTile] = useState<TileId | null>(null);
   const [hintTile, setHintTile] = useState<TileId | null>(null);
   const [pop, setPop] = useState(false);
+  const [failedImages, setFailedImages] = useState<ReadonlySet<string>>(() => new Set());
   const [misses, setMisses] = useState<Readonly<Record<string, number>>>({});
   const later = useTimers();
   useFontsReady(); // re-measure word width once Naskh is loaded
@@ -120,15 +125,23 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   const item = words[index]!;
   const activeBlank = item.parts.findIndex((p, i) => p.type === 'blank' && filled[i] == null);
 
-  const fit = useFitGrid({
+  // The picture sits above the word; on screens too short for that (phone landscape) it moves beside
+  // the word instead. Either way a GAP separates it from the word, keeping it outside the blank's
+  // 24px drop margin, so a drop on the picture counts as "elsewhere".
+  const fitConfig = (beside: boolean): FitGridConfig => ({
     count: TILES.length,
     gap: GAP,
     inset: INSET,
     minWidth: MIN_TILE,
     maxWidth: MAX_TILE,
     cardHeight: (w) => w,
-    reserveHeight: (w, areaWidth) => GAP + wordBlockHeight(wordFont(item, w, areaWidth - 2 * INSET)),
+    reserveHeight: (w, areaWidth) => {
+      const picture = pictureSize(w);
+      const word = wordBlockHeight(wordFont(item, w, areaWidth - 2 * INSET - (beside ? picture + GAP : 0)));
+      return (beside ? Math.max(picture, word) : picture + GAP + word) + GAP;
+    },
   });
+  const fit = useFitGrid(fitConfig(false));
 
   const activeBlankEl = useRef<HTMLSpanElement | null>(null);
   const { drag, over, bind } = useDrag<TileId>({
@@ -188,8 +201,16 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   }
 
   const finished = phase === 'finished';
-  const layout = fit.layout;
-  const areaWidth = (fit.area?.width ?? 0) - 2 * INSET;
+  let layout = fit.layout;
+  let beside = false;
+  if (fit.area && layout && !layout.fits) {
+    // Beside is never taller than stacked, so use it whenever stacked doesn't fit (even if this
+    // still needs the last-resort scroll on a tiny phone).
+    layout = solveFitGrid(fit.area.width, fit.area.height, fitConfig(true));
+    beside = true;
+  }
+  const picture = layout ? pictureSize(layout.cardWidth) : 0;
+  const areaWidth = (fit.area?.width ?? 0) - 2 * INSET - (beside ? picture + GAP : 0);
 
   let overlay = null;
   if (finished) {
@@ -217,15 +238,25 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
           className={cn('flex min-h-full flex-col items-center', layout.fits ? 'justify-center' : 'justify-start')}
           style={{ gap: GAP, padding: INSET }}
         >
-          <Word
-            item={item}
-            filled={filled}
-            activeBlank={activeBlank}
-            font={wordFont(item, layout.cardWidth, areaWidth)}
-            pop={pop}
-            blankRef={activeBlankEl}
-            over={over}
-          />
+          <div className={cn('flex items-center', !beside && 'flex-col')} style={{ gap: GAP }}>
+            <WordPicture
+              key={item.id}
+              item={item}
+              size={picture}
+              pastel={PASTELS[index % PASTELS.length]!}
+              failed={failedImages.has(item.id)}
+              onError={() => setFailedImages((prev) => new Set([...prev, item.id]))}
+            />
+            <Word
+              item={item}
+              filled={filled}
+              activeBlank={activeBlank}
+              font={wordFont(item, layout.cardWidth, areaWidth)}
+              pop={pop}
+              blankRef={activeBlankEl}
+              over={over}
+            />
+          </div>
 
           <div
             className="grid justify-center"
@@ -269,6 +300,40 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
         </div>
       )}
     </GameStage>
+  );
+}
+
+/** Display-only picture of the word (not a drop target): the image, or the emoji if there's none. */
+function WordPicture({
+  item,
+  size,
+  pastel,
+  failed,
+  onError,
+}: {
+  item: LetterFormItem;
+  size: number;
+  pastel: string;
+  failed: boolean;
+  onError: () => void;
+}) {
+  const showImage = item.image && !failed;
+  return (
+    <div
+      data-picture={item.id}
+      role="img"
+      aria-label={item.target}
+      className={cn('game-piece flex shrink-0 items-center justify-center overflow-hidden rounded-3xl shadow-md', showImage ? 'bg-white' : pastel)}
+      style={{ width: size, height: size }}
+    >
+      {showImage ? (
+        <img src={item.image} alt="" draggable={false} onError={onError} className="pointer-events-none h-full w-full object-contain p-2" />
+      ) : (
+        <span aria-hidden className="font-emoji leading-none" style={{ fontSize: Math.round(size * 0.55) }}>
+          {item.emoji}
+        </span>
+      )}
+    </div>
   );
 }
 

@@ -53,10 +53,17 @@ describe('units data', () => {
     expect(new Set(pairs)).toEqual(new Set(['ab|razi', 'barud|kalb', 'zahra|zara']));
   });
 
+  it('every letter-forms word has a picture emoji', () => {
+    for (const item of units.flatMap((u) => u.letterForms)) {
+      expect(item.emoji.trim(), `${item.id} emoji`).not.toBe('');
+    }
+  });
+
   it('every image/audio path exists under public/', () => {
     const paths = units.flatMap((u) => [
       ...u.vocab.flatMap((w) => [w.image, w.audio]),
       ...u.sentencePictures.map((s) => s.image),
+      ...u.letterForms.map((f) => f.image),
     ]);
     const missing = paths
       .filter((p): p is string => p !== undefined)

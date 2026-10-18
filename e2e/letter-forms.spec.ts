@@ -99,6 +99,7 @@ for (const vp of VIEWPORTS) {
       await openGame(page, (l) => (touch ? l.tap() : l.click()));
       await playAll(page, async (state) => {
         if (state !== 'mid-drag') await page.waitForTimeout(700); // let pop animations finish
+        if (state !== 'final screen') await expect(page.locator('[data-picture]')).toBeVisible();
         await expectFits(page, state, phone);
       });
     });
@@ -129,10 +130,11 @@ for (const [label, browser, viewport, touch] of [
       await expect(wrong).toHaveAttribute('data-wiggle', 'true');
       await expect(page.locator('[data-blank]')).toHaveCount(blanksBefore);
 
-      // Dropping somewhere else returns the tile and doesn't count as a wrong try.
+      // Dropping somewhere else returns the tile and doesn't count as a wrong try
+      // (once on an empty corner, once on the word's picture, which is display-only).
       const corner = { x: 12, y: viewport.height - 12 };
-      for (let i = 0; i < 2; i++) {
-        await drag(page, wrong, corner);
+      for (const target of [corner, page.locator('[data-picture]')]) {
+        await drag(page, wrong, target);
         await expectReturned(wrong);
       }
       await expect(correct).toHaveAttribute('data-hint', 'false');

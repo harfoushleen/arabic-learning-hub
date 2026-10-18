@@ -14,3 +14,4 @@ Characters go in `characters/` (razi, zizi); unit words go in `unit-1/<word-id>.
 | --- | --- | --- | --- |
 | `unit-1/zara.jpg` | TBD | TBD | TBD — supplied by the teacher; confirm source and license |
 | `unit-1/laiba.png` | TBD | TBD | TBD — supplied by the teacher; confirm source and license |
+| `unit-1/qarraba.webp` | TBD | TBD | TBD — supplied by the teacher; confirm source and license |
