@@ -64,6 +64,7 @@ describe('units data', () => {
       ...u.vocab.flatMap((w) => [w.image, w.audio]),
       ...u.sentencePictures.map((s) => s.image),
       ...u.letterForms.map((f) => f.image),
+      ...u.unscramble.map((set) => set.image),
     ]);
     const missing = paths
       .filter((p): p is string => p !== undefined)

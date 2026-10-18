@@ -21,7 +21,10 @@ export interface LetterFormItem {
   image?: string;  // set ONLY if the file exists in public/
 }
 export interface UnscrambleTile { id: string; text: string; }
-export interface UnscrambleSet { id: string; tiles: UnscrambleTile[]; answers: string[][]; needsReview?: string; }
+export interface UnscrambleSet {
+  id: string; tiles: UnscrambleTile[]; answers: string[][]; needsReview?: string;
+  image?: string;  // scene picture shown as a hint; set ONLY if the file exists in public/
+}
 export interface SentencePictureItem { id: string; sentence: string; image: string; }
 export interface GameDef { id: GameId; title: string; instruction: string; emoji: string; }
 export interface Unit {
@@ -157,6 +160,7 @@ export const units: Unit[] = [
     unscramble: [
       {
         id: 'set-1',
+        image: '/images/game-2/image-2.png',
         tiles: [
           { id: 'fi', text: 'فِي' },
           { id: 'laiba', text: 'لَعِبَ' },
@@ -170,6 +174,7 @@ export const units: Unit[] = [
       },
       {
         id: 'set-2',
+        image: '/images/game-2/image-1.png',
         tiles: [
           { id: 'lizizi', text: 'لِزِيزِي' },
           { id: 'sharaha', text: 'شَرَحَ' },
@@ -180,6 +185,7 @@ export const units: Unit[] = [
       },
       {
         id: 'set-3',
+        image: '/images/game-2/image-3.png',
         tiles: [
           { id: 'razi', text: 'رَازِي' },
           { id: 'zizi', text: 'زِيزِي' },

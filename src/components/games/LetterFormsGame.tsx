@@ -7,6 +7,7 @@ import { TATWEEL, worksheetSegments, ZWJ } from '@/lib/arabicJoining';
 import { celebrate } from '@/lib/celebrate';
 import { starsFor } from '@/lib/rounds';
 import { shuffle, shuffleAvoiding } from '@/lib/shuffle';
+import { textWidth } from '@/lib/textWidth';
 import { cn } from '@/lib/utils';
 import { BigButton } from './BigButton';
 import { DraggableTile } from './drag/DraggableTile';
@@ -38,14 +39,6 @@ const MAX_TILE = 200;
 const LINE = 1.8; // text-vowelled line-height
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-
-let measureCtx: CanvasRenderingContext2D | null | undefined;
-function textWidth(text: string, fontPx: number): number {
-  measureCtx ??= document.createElement('canvas').getContext('2d');
-  if (!measureCtx) return text.length * fontPx * 0.6;
-  measureCtx.font = `700 ${fontPx}px "Noto Naskh Arabic", serif`;
-  return measureCtx.measureText(text).width;
-}
 
 const blankBox = (font: number) => ({ width: Math.max(64, Math.round(font * 0.95)), height: Math.max(72, Math.round(font * 1.35)) });
 
