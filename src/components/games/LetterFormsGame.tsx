@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { getUnit, type LetterForm, type LetterFormItem, type LetterFormPart } from '@/data/units';
-import { solveFitGrid, useFitGrid, type FitGridConfig } from '@/hooks/useFitGrid';
+import { solveFitGrid, useFitGrid, type FitGridConfig, type FitGridLayout } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { useTimers } from '@/hooks/useTimers';
 import { TATWEEL, worksheetSegments, ZWJ } from '@/lib/arabicJoining';
@@ -35,16 +35,20 @@ const WORD_HOLD_MS = 1200;
 const GAP = 24;
 const INSET = 8;
 const MIN_TILE = 80;
-const MAX_TILE = 200;
+const GOOD_TILE = 110; // the word shrinks before tiles go below this
+const MAX_TILE = 140;
+const MAX_WORD_FONT = 72;
+const MIN_WORD_FONT = 40;
+const MIN_PICTURE = 96;
 const LINE = 1.8; // text-vowelled line-height
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 const blankBox = (font: number) => ({ width: Math.max(64, Math.round(font * 0.95)), height: Math.max(72, Math.round(font * 1.35)) });
 
-/** Word font for a tile width, shrunk if the word (blanks drawn as boxes) wouldn't fit the row. */
-function wordFont(item: LetterFormItem, tile: number, areaWidth: number): number {
-  let font = Math.round(clamp(tile * 0.7, 44, 110));
+/** Word font (at most `maxFont`), shrunk if the word (blanks drawn as boxes) wouldn't fit the row. */
+function wordFont(item: LetterFormItem, maxFont: number, areaWidth: number): number {
+  let font = maxFont;
   // Worst case: every letter plus the worksheet dashes beside the blanks.
   const text = item.parts.map((p) => (p.type === 'text' ? p.value : p.fill)).join('') + TATWEEL.repeat(2);
   const blanks = item.parts.filter((p) => p.type === 'blank').length;
@@ -56,8 +60,6 @@ function wordFont(item: LetterFormItem, tile: number, areaWidth: number): number
 /** Height reserved for the word: one line of text or a blank box, whichever is taller, plus room for marks. */
 const wordBlockHeight = (font: number) => Math.max(Math.ceil(font * LINE), blankBox(font).height) + 16;
 
-/** Square picture card above the word, scaled with the tiles. */
-const pictureSize = (tile: number) => Math.round(clamp(tile * 0.85, 64, 180));
 const PASTELS = ['bg-pastel-blue', 'bg-pastel-pink', 'bg-pastel-mint', 'bg-pastel-yellow', 'bg-pastel-lilac', 'bg-pastel-peach'];
 
 export default function LetterFormsGame({ unitId, onExit }: GameProps) {
@@ -121,20 +123,46 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   // The picture sits above the word; on screens too short for that (phone landscape) it moves beside
   // the word instead. Either way a GAP separates it from the word, keeping it outside the blank's
   // 24px drop margin, so a drop on the picture counts as "elsewhere".
-  const fitConfig = (beside: boolean): FitGridConfig => ({
+  const fitConfig = (beside: boolean, picture: number, maxFont: number): FitGridConfig => ({
     count: TILES.length,
     gap: GAP,
     inset: INSET,
     minWidth: MIN_TILE,
     maxWidth: MAX_TILE,
     cardHeight: (w) => w,
-    reserveHeight: (w, areaWidth) => {
-      const picture = pictureSize(w);
-      const word = wordBlockHeight(wordFont(item, w, areaWidth - 2 * INSET - (beside ? picture + GAP : 0)));
+    reserveHeight: (_w, areaWidth) => {
+      const word = wordBlockHeight(wordFont(item, maxFont, areaWidth - 2 * INSET - (beside ? picture + GAP : 0)));
       return (beside ? Math.max(picture, word) : picture + GAP + word) + GAP;
     },
   });
-  const fit = useFitGrid(fitConfig(false));
+  const fit = useFitGrid(fitConfig(false, MIN_PICTURE, MIN_WORD_FONT));
+
+  // The picture is the largest element: it aims for ~42% of the play area (capped at 360px, or 38%
+  // on very tall screens). When space is short the word shrinks first, then the tiles, the picture last.
+  let sizing: { layout: FitGridLayout; picture: number; font: number; beside: boolean } | null = null;
+  if (fit.area) {
+    const { width, height } = fit.area;
+    const choose = (beside: boolean) => {
+      const target = Math.min(Math.max(360, Math.round(height * 0.38)), Math.round(height * 0.42), width - 2 * INSET);
+      for (let picture = target; picture >= MIN_PICTURE; picture -= 8) {
+        for (let font = MAX_WORD_FONT; font >= MIN_WORD_FONT; font -= 4) {
+          const layout = solveFitGrid(width, height, fitConfig(beside, picture, font));
+          if (layout.fits && layout.cardWidth >= GOOD_TILE) return { layout, picture, font, beside };
+        }
+        const layout = solveFitGrid(width, height, fitConfig(beside, picture, MIN_WORD_FONT));
+        if (layout.fits) return { layout, picture, font: MIN_WORD_FONT, beside };
+      }
+      return null;
+    };
+    // Beside (phone landscape) only when stacked can't fit; then the last-resort scroll.
+    sizing = choose(false) ??
+      choose(true) ?? {
+        layout: solveFitGrid(width, height, fitConfig(true, MIN_PICTURE, MIN_WORD_FONT)),
+        picture: MIN_PICTURE,
+        font: MIN_WORD_FONT,
+        beside: true,
+      };
+  }
 
   const activeBlankEl = useRef<HTMLSpanElement | null>(null);
   const { drag, over, bind } = useDrag<TileId, 'blank'>({
@@ -197,15 +225,9 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   }
 
   const finished = phase === 'finished';
-  let layout = fit.layout;
-  let beside = false;
-  if (fit.area && layout && !layout.fits) {
-    // Beside is never taller than stacked, so use it whenever stacked doesn't fit (even if this
-    // still needs the last-resort scroll on a tiny phone).
-    layout = solveFitGrid(fit.area.width, fit.area.height, fitConfig(true));
-    beside = true;
-  }
-  const picture = layout ? pictureSize(layout.cardWidth) : 0;
+  const layout = sizing?.layout ?? null;
+  const beside = sizing?.beside ?? false;
+  const picture = sizing?.picture ?? 0;
   const areaWidth = (fit.area?.width ?? 0) - 2 * INSET - (beside ? picture + GAP : 0);
 
   let overlay = null;
@@ -247,7 +269,7 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
               item={item}
               filled={filled}
               activeBlank={activeBlank}
-              font={wordFont(item, layout.cardWidth, areaWidth)}
+              font={wordFont(item, sizing!.font, areaWidth)}
               pop={pop}
               blankRef={activeBlankEl}
               over={over}

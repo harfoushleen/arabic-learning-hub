@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { units, type LetterForm } from '../src/data/units';
-import { VIEWPORTS, expectFits } from './fit';
+import { VIEWPORTS, expectFits, expectPictureShare } from './fit';
 
 const ZWJ = '‍';
 const TILE_FOR_ANSWER: Record<LetterForm, string> = { 'بـ': 'initial', 'ـبـ': 'medial', 'ـب': 'final', 'ب': 'isolated' };
@@ -101,6 +101,7 @@ for (const vp of VIEWPORTS) {
         if (state !== 'mid-drag') await page.waitForTimeout(700); // let pop animations finish
         if (state !== 'final screen') await expect(page.locator('[data-picture]')).toBeVisible();
         await expectFits(page, state, phone);
+        if (vp.kind === 'ipad' && state !== 'final screen') await expectPictureShare(page, state, 0.35);
       });
     });
   });

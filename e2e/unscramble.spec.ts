@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { units } from '../src/data/units';
-import { VIEWPORTS, expectFits } from './fit';
+import { VIEWPORTS, expectFits, expectPictureShare } from './fit';
 
 const SETS = new Map(units[0]!.unscramble.map((s) => [s.id, s]));
 const BIG_SET = [...SETS.values()].reduce((a, b) => (b.tiles.length > a.tiles.length ? b : a));
@@ -143,6 +143,7 @@ for (const vp of VIEWPORTS) {
           seen.add(state);
           if (state !== 'mid-drag') await page.waitForTimeout(700); // let pop animations finish
           await expectFits(page, state, phone);
+          if (vp.kind === 'ipad' && state !== 'final screen') await expectPictureShare(page, state, 0.35);
         },
       });
       expect([...seen].sort()).toEqual(['final screen', 'mid-drag', 'partly built', 'set start']);

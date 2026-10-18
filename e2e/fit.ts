@@ -56,3 +56,12 @@ export async function expectFits(page: Page, state: string, phone: boolean) {
   expect(m.playScrollH, `${state}: play area overflows`).toBeLessThanOrEqual(m.playClientH);
   expect(m.outside, `${state}: pieces outside the viewport`).toEqual([]);
 }
+
+/** Asserts the game's picture is at least `share` of the play area height. */
+export async function expectPictureShare(page: Page, state: string, share: number) {
+  const { picture, play } = await page.evaluate(() => ({
+    picture: document.querySelector('#active-game-container [data-picture]')!.getBoundingClientRect().height,
+    play: document.querySelector<HTMLElement>('#active-game-container [data-play-area]')!.clientHeight,
+  }));
+  expect(picture / play, `${state}: picture ${Math.round(picture)}px of ${play}px play area`).toBeGreaterThanOrEqual(share);
+}

@@ -24,13 +24,13 @@ Fonts (self-hosted via @fontsource, Arabic subset only): Noto Naskh Arabic 700 f
 
 ## Touch & accessibility
 
-- Min tap target 48×48px (game pieces ≥ 64px). Min 12px gap between targets.
+- Min tap target 48×48px (game pieces ≥ 64px; sentence-game word tiles ≥ 56px tall). Min 12px gap between targets.
 
 - No HTML5 drag-and-drop (broken on iOS). Pieces are placed by tap-to-select/tap-to-place or by the pointer-events drag in `src/components/games/drag/` (touch and mouse alike). No drag libraries.
 
 - `touch-action: manipulation`; no double-tap zoom; `-webkit-tap-highlight-color: transparent`; `user-select: none` on game pieces.
 
-- Game Arabic text ≥ 32px with full tashkeel exactly as in the data. Never strip diacritics for display.
+- Game Arabic text ≥ 32px with full tashkeel exactly as in the data. Never strip diacritics for display. Exception: word tiles and slots in sentence games (e.g. Game 4) may go down to 24px text, but their tap targets stay ≥ 56px tall.
 
 - Respect `prefers-reduced-motion`.
 

@@ -28,12 +28,10 @@ const STRIP_PAD = 12;
 const BORDER = 3;
 const MAX_STRIP = 1200;
 const MIN_PICTURE = 120; // picture width, px
-const MAX_PICTURE = 560;
-const MAX_FONT = 60;
-const MIN_FONT = 32;
+const MAX_FONT = 30;
+const MIN_FONT = 24;
 const LINE = 1.8; // text-vowelled line-height
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const pictureHeight = (w: number) => Math.round((w * 3) / 4);
 
 /** Rows a greedy flex-wrap needs for these widths. */
@@ -63,11 +61,11 @@ interface Metrics {
 
 /** Piece sizes for a font, and the strip and bank heights for their worst case (most rows). */
 function metrics(set: UnscrambleSet, font: number, areaWidth: number): Metrics {
-  const pieceHeight = Math.max(64, Math.ceil(font * LINE));
+  const pieceHeight = Math.max(56, Math.ceil(font * LINE)); // tap targets stay ≥ 56px
   const padX = Math.round(font * 0.45);
   const tileWidth: Record<string, number> = {};
-  for (const t of set.tiles) tileWidth[t.id] = Math.max(64, Math.ceil(textWidth(t.text, font) * 1.04) + 2 * (padX + BORDER));
-  const slotWidth = Math.max(72, Math.round(font * 2.2));
+  for (const t of set.tiles) tileWidth[t.id] = Math.max(56, Math.ceil(textWidth(t.text, font) * 1.04) + 2 * (padX + BORDER));
+  const slotWidth = Math.max(64, Math.round(font * 2.4));
   const stripWidth = Math.min(areaWidth, MAX_STRIP);
   const inner = stripWidth - 2 * (STRIP_PAD + BORDER);
 
@@ -147,43 +145,38 @@ function Session({ sets: allSets, title, instruction, onRestart, onExit }: Sessi
   const tileById = new Map(set.tiles.map((t) => [t.id, t]));
   const showPicture = !!set.image && !failedImages.has(set.id);
 
-  // The picture is the one "card"; the strip and bank are the reserved height below it. Try the
-  // biggest font first and let the picture shrink; only once the picture would get too small does
-  // the font shrink.
-  const fitConfig = (font: number, maxPicture = MAX_PICTURE): FitGridConfig => ({
+  // The picture is the one "card" (exactly `pictureWidth` wide); the strip and bank are the reserved
+  // height below it.
+  const fitConfig = (font: number, pictureWidth: number): FitGridConfig => ({
     count: 1,
     columns: [1],
     gap: 0,
     inset: INSET,
-    minWidth: showPicture ? MIN_PICTURE : 0,
-    maxWidth: showPicture ? maxPicture : 0,
+    minWidth: showPicture ? pictureWidth : 0,
+    maxWidth: showPicture ? pictureWidth : 0,
     cardHeight: (w) => (showPicture ? pictureHeight(w) : 0),
     reserveHeight: (_w, areaWidth) => {
       const m = metrics(set, font, areaWidth);
       return (showPicture ? GAP : 0) + m.stripHeight + GAP + m.bankHeight;
     },
   });
-  const fit = useFitGrid(fitConfig(MIN_FONT));
+  const fit = useFitGrid(fitConfig(MIN_FONT, MIN_PICTURE));
 
+  // The picture is the largest element: it aims for ~48% of the play area height. When space is
+  // short the words and slots shrink first (30 → 24px), the picture last.
   let layout: FitGridLayout | null = null;
   let m: Metrics | null = null;
   if (fit.area) {
     const { width, height } = fit.area;
-    const maxPicture = Math.min(MAX_PICTURE, Math.round(((height - 2 * INSET) * 0.5 * 4) / 3));
-    const minPictureHeight = clamp(height * 0.28, 90, 220);
-    for (let font = MAX_FONT; font >= MIN_FONT; font -= 2) {
-      layout = solveFitGrid(width, height, fitConfig(font, maxPicture));
-      m = metrics(set, font, width - 2 * INSET);
-      if (layout.fits && (!showPicture || layout.cardHeight >= minPictureHeight)) break;
-    }
-    // Nothing reached the preferred picture size: the smallest font that fits at all, else scroll.
-    if (layout && (!layout.fits || (showPicture && layout.cardHeight < minPictureHeight))) {
+    const target = Math.min(width - 2 * INSET, Math.round((height * 0.48 * 4) / 3));
+    search: for (let picture = Math.max(target, MIN_PICTURE); picture >= MIN_PICTURE; picture -= 8) {
       for (let font = MAX_FONT; font >= MIN_FONT; font -= 2) {
-        layout = solveFitGrid(width, height, fitConfig(font, maxPicture));
+        layout = solveFitGrid(width, height, fitConfig(font, picture));
         m = metrics(set, font, width - 2 * INSET);
-        if (layout.fits) break;
+        if (layout.fits) break search;
       }
     }
+    // Nothing fits (phone landscape): smallest everything, and the last-resort scroll.
   }
 
   const stripEl = useRef<HTMLDivElement | null>(null);
