@@ -5,8 +5,8 @@ import { RETURN_MS, type DragState, type useDrag } from './useDrag';
 
 interface DraggableTileProps<Id extends string> {
   id: Id;
-  drag: DragState<Id> | null;
-  bind: ReturnType<typeof useDrag<Id>>['bind'];
+  drag: DragState<Id, string> | null;
+  bind: ReturnType<typeof useDrag<Id, string>>['bind'];
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -48,7 +48,9 @@ export function DraggableTile<Id extends string>({ id, drag, bind, className, st
               width: mine.rect.width,
               height: mine.rect.height,
               // Shrinks over the target so the highlighted drop zone stays visible around it.
-              transform: `translate(${mine.dx}px, ${mine.dy}px) scale(${mine.returning ? 1 : mine.over ? 0.6 : 1.1})`,
+              transform: mine.returning
+                ? 'translate(0, 0) scale(1)'
+                : `translate(${mine.dx}px, ${mine.dy}px) scale(${mine.over ? 0.6 : 1.1})`,
               transition: mine.returning ? `transform ${RETURN_MS}ms ease-out` : 'none',
             }}
           >
