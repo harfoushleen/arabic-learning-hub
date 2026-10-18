@@ -9,6 +9,7 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
+e2e/screenshots/
 playwright/.cache/
 
 # Logs

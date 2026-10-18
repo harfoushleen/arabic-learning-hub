@@ -77,3 +77,27 @@ export function joinedSegments(
   }
   return out;
 }
+
+export const TATWEEL = 'ـ';
+
+/**
+ * Worksheet view of a word with missing letters: like joinedSegments(), plus a tatweel beside each
+ * EMPTY blank wherever the neighboring letter really connects to the ب (dual-joining), e.g. طَـ▢ـل.
+ * Only for display next to an unfilled blank — a completed word never contains tatweel.
+ */
+export function worksheetSegments(
+  parts: readonly LetterFormPart[],
+  filled: ReadonlyArray<string | null | undefined> = [],
+): JoinedSegment[] {
+  const out = joinedSegments(parts, filled);
+  out.forEach((seg, i) => {
+    if (!seg.isBlank || stripTashkeel(seg.text).replaceAll(ZWJ, '') !== '') return;
+    const before = out[i - 1];
+    const after = out[i + 1];
+    const last = before && baseLetters(before.text).at(-1);
+    const first = after && baseLetters(after.text)[0];
+    if (before && last && connects(last, 'ب')) before.text += TATWEEL;
+    if (after && first && connects('ب', first)) after.text = TATWEEL + after.text;
+  });
+  return out;
+}

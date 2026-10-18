@@ -15,7 +15,11 @@ export interface VocabWord {
 export type LetterFormPart =
   | { type: 'text'; value: string }
   | { type: 'blank'; answer: LetterForm; fill: string }; // fill = letter WITH tashkeel as it appears in the word
-export interface LetterFormItem { id: string; target: string; parts: LetterFormPart[]; }
+export interface LetterFormItem {
+  id: string; target: string; parts: LetterFormPart[];
+  emoji: string;   // picture of the word; fallback if the image is missing or fails to load
+  image?: string;  // set ONLY if the file exists in public/
+}
 export interface UnscrambleTile { id: string; text: string; }
 export interface UnscrambleSet { id: string; tiles: UnscrambleTile[]; answers: string[][]; needsReview?: string; }
 export interface SentencePictureItem { id: string; sentence: string; image: string; }
@@ -94,6 +98,7 @@ export const units: Unit[] = [
     letterForms: [
       {
         id: 'dabdoob',
+        emoji: '🧸',
         target: 'دَبْدُوب',
         parts: [
           { type: 'text', value: 'دَ' },
@@ -104,6 +109,7 @@ export const units: Unit[] = [
       },
       {
         id: 'arnab',
+        emoji: '🐇',
         target: 'أَرْنَب',
         parts: [
           { type: 'text', value: 'أَرْنَ' },
@@ -112,6 +118,7 @@ export const units: Unit[] = [
       },
       {
         id: 'tabl',
+        emoji: '🥁',
         target: 'طَبْل',
         parts: [
           { type: 'text', value: 'طَ' },
@@ -121,6 +128,7 @@ export const units: Unit[] = [
       },
       {
         id: 'qarraba',
+        emoji: '🔌', image: '/images/unit-1/qarraba.webp',
         target: 'قَرَّبَ',
         parts: [
           { type: 'text', value: 'قَرَّ' },
@@ -129,6 +137,7 @@ export const units: Unit[] = [
       },
       {
         id: 'laiba',
+        emoji: '🤸', image: '/images/unit-1/laiba.png',
         target: 'لَعِبَ',
         parts: [
           { type: 'text', value: 'لَعِ' },
@@ -137,6 +146,7 @@ export const units: Unit[] = [
       },
       {
         id: 'alkalb',
+        emoji: '🐕',
         target: 'الكَلْب',
         parts: [
           { type: 'text', value: 'الكَلْ' },

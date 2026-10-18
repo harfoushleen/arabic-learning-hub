@@ -26,7 +26,7 @@ Fonts (self-hosted via @fontsource, Arabic subset only): Noto Naskh Arabic 700 f
 
 - Min tap target 48×48px (game pieces ≥ 64px). Min 12px gap between targets.
 
-- No HTML5 drag-and-drop (broken on iOS). Primary interaction = tap to select, tap to place. Drag via @dnd-kit is optional.
+- No HTML5 drag-and-drop (broken on iOS). Pieces are placed by tap-to-select/tap-to-place or by the pointer-events drag in `src/components/games/drag/` (touch and mouse alike). No drag libraries.
 
 - `touch-action: manipulation`; no double-tap zoom; `-webkit-tap-highlight-color: transparent`; `user-select: none` on game pieces.
 
@@ -44,7 +44,7 @@ Fonts (self-hosted via @fontsource, Arabic subset only): Noto Naskh Arabic 700 f
 
 - Letters that never connect to the following letter: ا أ إ آ ٱ د ذ ر ز و ؤ ء ة. Never put a ZWJ after these.
 
-- Tatweel (ـ) is only for showing a standalone letter form on a choice tile (بـ ـبـ ـب ب). Never insert tatweel into a word.
+- Tatweel (ـ) is allowed only on choice tiles (بـ ـبـ ـب ب) and beside an unfilled blank (`worksheetSegments()`, e.g. طَـ▢ـل). Never in a completed word.
 
 - Wherever possible, render a completed word as ONE text node.
 

@@ -6,6 +6,7 @@ import {
   expectedForm,
   joinedSegments,
   stripTashkeel,
+  worksheetSegments,
 } from './arabicJoining';
 
 const letterForms = units.flatMap((u) => u.letterForms);
@@ -93,6 +94,34 @@ describe('joinedSegments', () => {
         .join('')
         .replaceAll(ZWJ, '');
       expect(text.normalize('NFC')).toBe(item.target.normalize('NFC'));
+    }
+  });
+});
+
+describe('worksheetSegments', () => {
+  const ws = (id: string) =>
+    worksheetSegments(byId(id).parts)
+      .map((s) => (s.isBlank ? '▢' : s.text))
+      .join(' ');
+
+  it('adds a tatweel only where the neighbor really connects to the missing ب', () => {
+    expect(ws('tabl')).toBe('طَـ ▢ ـل');
+    expect(ws('arnab')).toBe('أَرْنَـ ▢');
+    expect(ws('laiba')).toBe('لَعِـ ▢');
+    expect(ws('alkalb')).toBe('الكَلْـ ▢');
+    expect(ws('dabdoob')).toBe('دَ ▢ ـدُو ▢');
+    expect(ws('qarraba')).toBe('قَرَّ ▢');
+  });
+
+  it('dashes the remaining blank of a half-filled word and joins the filled one', () => {
+    const item = byId('dabdoob');
+    const segs = worksheetSegments(item.parts, [null, 'بْ', null, null]).map((s) => s.text);
+    expect(segs).toEqual(['دَ', `بْ${ZWJ}`, `${ZWJ}دُو`, '']);
+  });
+
+  it('adds no tatweel once the word is complete', () => {
+    for (const item of letterForms) {
+      expect(worksheetSegments(item.parts, allFilled(item))).toEqual(joinedSegments(item.parts, allFilled(item)));
     }
   });
 });

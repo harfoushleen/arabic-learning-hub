@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import confetti from 'canvas-confetti';
+import { useCallback, useEffect, useState } from 'react';
 import { getUnit, type VocabWord } from '@/data/units';
 import { useFitGrid } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
+import { useTimers } from '@/hooks/useTimers';
+import { celebrate } from '@/lib/celebrate';
 import { buildRounds, starsFor } from '@/lib/rounds';
 import { derange } from '@/lib/shuffle';
-import { cn, prefersReducedMotion } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { BigButton } from './BigButton';
+import { GameFinal } from './GameFinal';
 import { GameStage } from './GameStage';
 import type { GameProps } from './types';
 
@@ -215,7 +217,7 @@ function Session({ words, title, instruction, onRestart, onExit }: SessionProps)
   let overlay = null;
   if (finished) {
     const stars = starsFor(words.length - Object.keys(misses).length, words.length);
-    overlay = <FinalScreen stars={stars} onRestart={onRestart} onExit={onExit} />;
+    overlay = <GameFinal stars={stars} onRestart={onRestart} onExit={onExit} />;
   } else if (phase === 'round-complete') {
     overlay = (
       <div className="flex animate-rise-in flex-col items-center gap-[clamp(12px,calc(var(--app-h,100dvh)*0.04),32px)] rounded-[2rem] bg-white px-10 py-[clamp(12px,calc(var(--app-h,100dvh)*0.04),40px)] shadow-xl">
@@ -427,58 +429,6 @@ function PictureCard({
   );
 }
 
-function FinalScreen({
-  stars,
-  onRestart,
-  onExit,
-}: {
-  stars: 1 | 2 | 3;
-  onRestart: () => void;
-  onExit?: () => void;
-}) {
-  useEffect(() => {
-    if (stars === 3) celebrate();
-  }, [stars]);
-
-  // Sized from the visible height so it always fits inside the stage.
-  return (
-    <div className="flex flex-col items-center gap-[clamp(12px,calc(var(--app-h,100dvh)*0.04),40px)]">
-      <p className="text-vowelled text-[clamp(28px,calc(var(--app-h,100dvh)*0.07),64px)]">
-        أَحْسَنْتَ! 🌟
-      </p>
-      <div className="flex gap-4" role="img" aria-label={`${stars} / 3`}>
-        {[1, 2, 3].map((n) => (
-          <span
-            key={n}
-            aria-hidden
-            className={cn(
-              'font-emoji text-[clamp(40px,calc(var(--app-h,100dvh)*0.12),120px)] leading-none',
-              n > stars && 'opacity-25 grayscale',
-            )}
-          >
-            ⭐
-          </span>
-        ))}
-      </div>
-      <div className="flex flex-wrap justify-center gap-4">
-        <BigButton onClick={onRestart} autoFocus>
-          أَعِدِ اللُّعْبَةَ
-        </BigButton>
-        {onExit && (
-          <BigButton onClick={onExit} variant="secondary">
-            عَوْدَة
-          </BigButton>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function celebrate() {
-  if (prefersReducedMotion()) return;
-  void confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 }, zIndex: 200, disableForReducedMotion: true });
-}
-
 function decodeImage(src: string): Promise<boolean> {
   const img = new Image();
   img.src = src;
@@ -486,23 +436,4 @@ function decodeImage(src: string): Promise<boolean> {
     () => true,
     () => false,
   );
-}
-
-/** setTimeout that is cleared automatically when the component unmounts. */
-function useTimers() {
-  const ids = useRef(new Set<number>());
-  useEffect(() => {
-    const set = ids.current;
-    return () => {
-      set.forEach((id) => window.clearTimeout(id));
-      set.clear();
-    };
-  }, []);
-  return useCallback((fn: () => void, ms: number) => {
-    const id = window.setTimeout(() => {
-      ids.current.delete(id);
-      fn();
-    }, ms);
-    ids.current.add(id);
-  }, []);
 }
