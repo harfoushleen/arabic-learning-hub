@@ -13,6 +13,16 @@ describe('units data', () => {
     expect(getUnit('nope')).toBeUndefined();
   });
 
+  it.each(units.map((u) => [u.id, u] as const))('%s: has a label and theme; every game has a short and a theme', (_id, unit) => {
+    const themes = ['sky', 'mint', 'peach', 'lavender', 'lemon'];
+    expect(unit.label.trim()).not.toBe('');
+    expect(themes).toContain(unit.theme);
+    for (const game of unit.games) {
+      expect(game.short.trim(), `${game.id} short`).not.toBe('');
+      expect(themes, `${game.id} theme`).toContain(game.theme);
+    }
+  });
+
   it.each(units.map((u) => [u.id, u] as const))('%s: unique vocab ids', (_id, unit) => {
     const ids = unit.vocab.map((w) => w.id);
     expect(new Set(ids).size).toBe(ids.length);

@@ -16,6 +16,12 @@
 
   body {
     @apply bg-cream font-naskh font-bold text-ink antialiased;
+    /* Soft pastel corner blobs (the game dialog covers them with its own cream background). */
+    background-image:
+      radial-gradient(circle at 8% -5%, theme('colors.peach.DEFAULT') 0, transparent 26%),
+      radial-gradient(circle at 96% 8%, theme('colors.sky.DEFAULT') 0, transparent 24%),
+      radial-gradient(circle at 50% 110%, theme('colors.mint.DEFAULT') 0, transparent 30%);
+    background-attachment: fixed;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;

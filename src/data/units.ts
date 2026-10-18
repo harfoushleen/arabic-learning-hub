@@ -26,9 +26,16 @@ export interface UnscrambleSet {
   image?: string;  // scene picture shown as a hint; set ONLY if the file exists in public/
 }
 export interface SentencePictureItem { id: string; sentence: string; image: string; }
-export interface GameDef { id: GameId; title: string; instruction: string; emoji: string; }
+export type Theme = 'sky' | 'mint' | 'peach' | 'lavender' | 'lemon';
+export interface GameDef {
+  id: GameId; title: string; instruction: string; emoji: string;
+  short: string;  // one-line subtitle on the game card
+  theme: Theme;
+}
 export interface Unit {
-  id: string; title: string; letters: string[]; color: string;
+  id: string; title: string; letters: string[];
+  label: string;  // e.g. 'الوَحْدَةُ الأُولَى'
+  theme: Theme;
   games: GameDef[]; vocab: VocabWord[]; sentencePictures: SentencePictureItem[];
   letterForms: LetterFormItem[]; unscramble: UnscrambleSet[];
 }
@@ -65,31 +72,40 @@ export const units: Unit[] = [
     id: 'unit-1',
     title: 'حَرْفَا الْبَاءِ وَالزَّايِ',
     letters: ['ب', 'ز'],
-    color: '#D8ECF7',
+    label: 'الوَحْدَةُ الأُولَى',
+    theme: 'sky',
     games: [
       {
         id: 'word-picture',
         title: 'رَبْطُ الكَلِمَةِ بِالصُّورَةِ',
         instruction: 'أَخْتَارُ الكَلِمَةَ المُنَاسِبَةَ وَأَضَعُهَا تَحْتَ الصُّورَةِ',
         emoji: '🖼️',
+        short: 'أَضَعُ الكَلِمَةَ تَحْتَ صُورَتِهَا',
+        theme: 'sky',
       },
       {
         id: 'sentence-picture',
         title: 'رَبْطُ الجُمْلَةِ بِالرَّسْمِ',
         instruction: 'أَصِلُ الجُمْلَةَ بِالرَّسْمِ المُنَاسِبِ لَهَا',
         emoji: '📖',
+        short: 'أَصِلُ الجُمْلَةَ بِرَسْمِهَا',
+        theme: 'peach',
       },
       {
         id: 'letter-forms',
         title: 'أَشْكَالُ حَرْفِ البَاءِ',
         instruction: 'أَضَعُ الحَرْفَ (ب) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
         emoji: '🔤',
+        short: 'أُكْمِلُ الكَلِمَةَ بِالشَّكْلِ المُنَاسِبِ',
+        theme: 'mint',
       },
       {
         id: 'unscramble',
         title: 'تَرْتِيبُ الكَلِمَاتِ',
         instruction: 'أُرَتِّبُ الكَلِمَاتِ التَّالِيَةَ فِي جُمْلَةٍ مُفِيدَةٍ',
         emoji: '🧩',
+        short: 'أُرَتِّبُ الكَلِمَاتِ فِي جُمْلَةٍ',
+        theme: 'lavender',
       },
     ],
     vocab: unit1Vocab,

@@ -9,14 +9,20 @@ export default {
         '3xl': '1600px',
       },
       fontFamily: {
-        cairo: ['Cairo', ...defaultTheme.fontFamily.sans],
         naskh: ['"Noto Naskh Arabic"', ...defaultTheme.fontFamily.serif],
         // Emoji must not inherit Naskh's tall line metrics, or they shift out of their boxes.
         emoji: ['"Apple Color Emoji"', '"Segoe UI Emoji"', '"Noto Color Emoji"', 'sans-serif'],
       },
       colors: {
+        // Shell design tokens: exact values from docs/design/home-mockup.html (:root).
         cream: '#FBF7EF',
-        ink: '#3D3A4B',
+        ink: '#3B3A4A',
+        muted: '#7A7787',
+        sky: { DEFAULT: '#DCEEFB', ink: '#2F6E9E' },
+        mint: { DEFAULT: '#DDF5E6', ink: '#2E7D57' },
+        peach: { DEFAULT: '#FFE4D6', ink: '#B2563A' },
+        lavender: { DEFAULT: '#ECE4FB', ink: '#6A4FB0' },
+        lemon: { DEFAULT: '#FFF3C7', ink: '#8A6D0B' },
         pastel: {
           blue: '#D8ECF7',
           pink: '#FBE0E6',
@@ -25,6 +31,14 @@ export default {
           lilac: '#E9E1F7',
           peach: '#FFE3D3',
         },
+      },
+      borderRadius: {
+        'card-lg': '32px',
+        'card-md': '22px',
+      },
+      boxShadow: {
+        card: '0 6px 0 rgba(59,58,74,.07), 0 14px 28px rgba(59,58,74,.08)',
+        'card-pressed': '0 2px 0 rgba(59,58,74,.07), 0 6px 12px rgba(59,58,74,.06)',
       },
       keyframes: {
         shake: {

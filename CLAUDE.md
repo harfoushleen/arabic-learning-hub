@@ -18,7 +18,7 @@
 
 Vite + React 19 + TypeScript (strict) + Tailwind CSS v3 + shadcn/ui. RTL everywhere (`<html lang="ar" dir="rtl">`).
 
-Fonts (self-hosted via @fontsource, Arabic subset only): Noto Naskh Arabic 700 for all vowelled text; Cairo 800 only for unvowelled display letters. Pastel palette; background #FBF7EF.
+Fonts (self-hosted via @fontsource, Arabic subset only): Noto Naskh Arabic 700 for ALL Arabic, including standalone letters (Cairo's ز looks like a Latin "j"). Pastel palette and shell tokens from `docs/design/home-mockup.html`; background #FBF7EF.
 
 
 

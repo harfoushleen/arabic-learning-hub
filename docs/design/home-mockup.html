@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arabic Letter Games — Home & Unit mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Noto+Naskh+Arabic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ DESIGN TOKENS (copy these into tailwind.config) ============ */
+  :root {
+    --bg: #FBF7EF;
+    --ink: #3B3A4A;
+    --muted: #7A7787;
+    --white: #FFFFFF;
+
+    /* pastel + matching "ink" (text/accent) pairs */
+    --sky: #DCEEFB;      --sky-ink: #2F6E9E;
+    --mint: #DDF5E6;     --mint-ink: #2E7D57;
+    --peach: #FFE4D6;    --peach-ink: #B2563A;
+    --lavender: #ECE4FB; --lavender-ink: #6A4FB0;
+    --lemon: #FFF3C7;    --lemon-ink: #8A6D0B;
+
+    --radius-lg: 32px;
+    --radius-md: 22px;
+    --shadow: 0 6px 0 rgba(59,58,74,.07), 0 14px 28px rgba(59,58,74,.08);
+    --shadow-pressed: 0 2px 0 rgba(59,58,74,.07), 0 6px 12px rgba(59,58,74,.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100dvh;
+    color: var(--ink);
+    font-family: "Cairo", system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    background:
+      radial-gradient(circle at 8% -5%, var(--peach) 0, transparent 26%),
+      radial-gradient(circle at 96% 8%, var(--sky) 0, transparent 24%),
+      radial-gradient(circle at 50% 110%, var(--mint) 0, transparent 30%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+  /* All Arabic letters & vowelled text use Naskh (fixes ز looking like a Latin "j" in Cairo) */
+  .naskh { font-family: "Noto Naskh Arabic", serif; line-height: 1.8; }
+
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
+  button:focus-visible { outline: 4px solid var(--ink); outline-offset: 4px; }
+
+  .screen { max-width: 1160px; margin: 0 auto; padding: 24px 24px 48px; }
+  .screen[hidden] { display: none; }
+
+  /* ===================== HOME ===================== */
+  .hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 24px 0 36px; }
+  .logo { display: flex; gap: 10px; margin-bottom: 8px; }
+  .logo span {
+    width: 64px; height: 64px; display: grid; place-items: center;
+    font-size: 40px; font-weight: 700; line-height: 1;
+    border-radius: 20px; box-shadow: var(--shadow);
+  }
+  .logo span:nth-child(1) { background: var(--peach); color: var(--peach-ink); transform: rotate(6deg); }
+  .logo span:nth-child(2) { background: var(--sky); color: var(--sky-ink); transform: rotate(-6deg) translateY(6px); }
+  .logo span:nth-child(3) { background: var(--mint); color: var(--mint-ink); transform: rotate(4deg); }
+  .hero h1 { margin: 0; font-size: clamp(36px, 5vw, 52px); font-weight: 700; line-height: 1.5; }
+  .hero p { margin: 0; font-size: clamp(20px, 2.4vw, 26px); color: var(--muted); }
+
+  .units {
+    display: grid; gap: 28px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  }
+
+  .unit-card {
+    position: relative; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    padding: 22px 20px 20px; min-height: 300px;
+    background: var(--c); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .unit-card:hover { transform: translateY(-3px); }
+  .unit-card:active { transform: translateY(3px); box-shadow: var(--shadow-pressed); }
+
+  .badge {
+    display: inline-block; padding: 2px 16px; border-radius: 999px;
+    background: var(--white); color: var(--ci);
+    font-size: 18px; font-weight: 700; line-height: 1.9;
+  }
+  .letters { display: flex; gap: 14px; }
+  .tile {
+    width: clamp(84px, 9vw, 104px); aspect-ratio: 1;
+    display: grid; place-items: center;
+    background: var(--white); color: var(--ci);
+    border-radius: var(--radius-md);
+    font-size: clamp(54px, 6vw, 68px); font-weight: 700; line-height: 1;
+    box-shadow: inset 0 -5px 0 rgba(59,58,74,.06);
+  }
+  .unit-title { font-size: clamp(24px, 2.6vw, 28px); font-weight: 700; }
+  .mini-games { display: flex; gap: 8px; margin-top: auto; }
+  .mini-games span {
+    width: 44px; height: 44px; display: grid; place-items: center;
+    background: rgba(255,255,255,.7); border-radius: 14px; font-size: 22px;
+  }
+  .example-tag {
+    position: absolute; top: 14px; left: 14px; direction: ltr;
+    font: 700 11px/1 system-ui, sans-serif; letter-spacing: .05em;
+    color: var(--muted); background: rgba(255,255,255,.8);
+    padding: 6px 8px; border-radius: 8px; border: 1px dashed var(--muted);
+  }
+
+  /* ===================== UNIT ===================== */
+  #unit { display: flex; flex-direction: column; min-height: 100dvh; padding-top: 16px; }
+  #unit[hidden] { display: none; }
+
+  .unit-head {
+    display: flex; align-items: center; gap: 18px;
+    padding: 14px 16px; margin-bottom: 22px;
+    background: var(--c); border-radius: var(--radius-lg); box-shadow: var(--shadow);
+  }
+  .back {
+    width: 64px; height: 64px; flex: none;
+    display: grid; place-items: center;
+    background: var(--white); color: var(--ci);
+    border-radius: 20px; font-size: 32px; font-weight: 800;
+    box-shadow: var(--shadow);
+  }
+  .back:active { transform: translateY(3px); box-shadow: var(--shadow-pressed); }
+  .unit-meta { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+  .unit-meta h2 { margin: 0; font-size: clamp(26px, 3vw, 34px); font-weight: 700; line-height: 1.6; }
+  .unit-head .tile { width: 72px; font-size: 46px; border-radius: 18px; }
+
+  .games-grid {
+    flex: 1; display: grid; gap: 22px;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: minmax(220px, 1fr);
+  }
+  @media (min-width: 1100px) and (orientation: landscape) {
+    .games-grid { grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(320px, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .games-grid { grid-template-columns: 1fr; }
+    .unit-head .letters { display: none; }
+  }
+
+  .game-card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 22px 18px; text-align: center;
+    background: var(--white); border-radius: var(--radius-lg);
+    border: 4px solid var(--c);
+    box-shadow: var(--shadow);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .game-card:hover { transform: translateY(-3px); }
+  .game-card:active { transform: translateY(3px); box-shadow: var(--shadow-pressed); }
+  .g-emoji {
+    width: clamp(84px, 10vw, 112px); aspect-ratio: 1;
+    display: grid; place-items: center;
+    background: var(--c); border-radius: 50%;
+    font-size: clamp(44px, 5vw, 58px);
+  }
+  .g-title { font-size: clamp(22px, 2.4vw, 26px); font-weight: 700; }
+  .g-short { font-size: clamp(17px, 1.8vw, 19px); color: var(--muted); line-height: 1.7; }
+  .play {
+    margin-top: 4px; min-height: 52px; padding: 6px 26px;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--c); color: var(--ci);
+    border-radius: 999px; font-size: 22px; font-weight: 700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  /* ===================== MOCKUP-ONLY SWITCHER ===================== */
+  .switcher {
+    position: fixed; bottom: 16px; left: 16px; direction: ltr; z-index: 10;
+    display: flex; gap: 6px; padding: 6px;
+    background: var(--ink); border-radius: 14px;
+    font: 600 13px/1 system-ui, sans-serif;
+  }
+  .switcher button { color: #fff; padding: 10px 12px; border-radius: 10px; }
+  .switcher button[aria-pressed="true"] { background: rgba(255,255,255,.18); }
+</style>
+</head>
+<body>
+
+<!-- ============================ HOME ============================ -->
+<main class="screen" id="home">
+  <header class="hero">
+    <div class="logo naskh" aria-hidden="true"><span>أ</span><span>ب</span><span>ت</span></div>
+    <h1 class="naskh">أَلْعَابُ الحُرُوفِ</h1>
+    <p class="naskh">أَخْتَارُ وَحْدَةً وَأَلْعَبُ</p>
+  </header>
+
+  <section class="units" aria-label="الوحدات">
+    <!-- REAL unit (from units.ts) -->
+    <button class="unit-card" style="--c:var(--sky);--ci:var(--sky-ink)" data-go="unit">
+      <span class="badge naskh">الوَحْدَةُ الأُولَى</span>
+      <span class="letters naskh"><span class="tile">ب</span><span class="tile">ز</span></span>
+      <span class="unit-title naskh">حَرْفَا البَاءِ وَالزَّايِ</span>
+      <span class="mini-games" aria-hidden="true"><span>🖼️</span><span>📖</span><span>🔤</span><span>🧩</span></span>
+    </button>
+
+    <!--
+      EXAMPLE units: commented out until units 2 and 3 exist. They only show how the grid scales;
+      do NOT add them to the app. Uncomment to preview a fuller grid.
+
+    <button class="unit-card" style="--c:var(--mint);--ci:var(--mint-ink)">
+      <span class="example-tag">EXAMPLE</span>
+      <span class="badge naskh">الوَحْدَةُ الثَّانِيَةُ</span>
+      <span class="letters naskh"><span class="tile">ت</span><span class="tile">ث</span></span>
+      <span class="unit-title naskh">حَرْفَا التَّاءِ وَالثَّاءِ</span>
+      <span class="mini-games" aria-hidden="true"><span>🖼️</span><span>📖</span><span>🔤</span><span>🧩</span></span>
+    </button>
+
+    <button class="unit-card" style="--c:var(--peach);--ci:var(--peach-ink)">
+      <span class="example-tag">EXAMPLE</span>
+      <span class="badge naskh">الوَحْدَةُ الثَّالِثَةُ</span>
+      <span class="letters naskh"><span class="tile">ج</span><span class="tile">ح</span></span>
+      <span class="unit-title naskh">حَرْفَا الجِيمِ وَالحَاءِ</span>
+      <span class="mini-games" aria-hidden="true"><span>🖼️</span><span>📖</span><span>🔤</span><span>🧩</span></span>
+    </button>
+    -->
+  </section>
+</main>
+
+<!-- ============================ UNIT ============================ -->
+<main class="screen" id="unit" hidden>
+  <header class="unit-head" style="--c:var(--sky);--ci:var(--sky-ink)">
+    <button class="back" data-go="home" aria-label="رُجُوع">→</button>
+    <div class="unit-meta">
+      <span class="badge naskh">الوَحْدَةُ الأُولَى</span>
+      <h2 class="naskh">حَرْفَا البَاءِ وَالزَّايِ</h2>
+    </div>
+    <div class="letters naskh" aria-hidden="true"><span class="tile">ب</span><span class="tile">ز</span></div>
+  </header>
+
+  <section class="games-grid" aria-label="الألعاب">
+    <button class="game-card" style="--c:var(--sky);--ci:var(--sky-ink)">
+      <span class="g-emoji" aria-hidden="true">🖼️</span>
+      <span class="g-title naskh">رَبْطُ الكَلِمَةِ بِالصُّورَةِ</span>
+      <span class="g-short naskh">أَضَعُ الكَلِمَةَ تَحْتَ صُورَتِهَا</span>
+      <span class="play naskh">أَلْعَبُ ◀</span>
+    </button>
+
+    <button class="game-card" style="--c:var(--peach);--ci:var(--peach-ink)">
+      <span class="g-emoji" aria-hidden="true">📖</span>
+      <span class="g-title naskh">رَبْطُ الجُمْلَةِ بِالرَّسْمِ</span>
+      <span class="g-short naskh">أَصِلُ الجُمْلَةَ بِرَسْمِهَا</span>
+      <span class="play naskh">أَلْعَبُ ◀</span>
+    </button>
+
+    <button class="game-card" style="--c:var(--mint);--ci:var(--mint-ink)">
+      <span class="g-emoji" aria-hidden="true">🔤</span>
+      <span class="g-title naskh">أَشْكَالُ حَرْفِ البَاءِ</span>
+      <span class="g-short naskh">أُكْمِلُ الكَلِمَةَ بِالشَّكْلِ المُنَاسِبِ</span>
+      <span class="play naskh">أَلْعَبُ ◀</span>
+    </button>
+
+    <button class="game-card" style="--c:var(--lavender);--ci:var(--lavender-ink)">
+      <span class="g-emoji" aria-hidden="true">🧩</span>
+      <span class="g-title naskh">تَرْتِيبُ الكَلِمَاتِ</span>
+      <span class="g-short naskh">أُرَتِّبُ الكَلِمَاتِ فِي جُمْلَةٍ</span>
+      <span class="play naskh">أَلْعَبُ ◀</span>
+    </button>
+  </section>
+</main>
+
+<!-- Mockup-only screen switcher (not part of the app) -->
+<nav class="switcher" aria-label="Mockup screens">
+  <button data-go="home" aria-pressed="true">Home</button>
+  <button data-go="unit" aria-pressed="false">Unit 1</button>
+</nav>
+
+<script>
+  const screens = { home: document.getElementById('home'), unit: document.getElementById('unit') };
+  function go(name) {
+    for (const [k, el] of Object.entries(screens)) el.hidden = k !== name;
+    document.querySelectorAll('.switcher button').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.go === name)));
+    window.scrollTo(0, 0);
+  }
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-go]');
+    if (t) go(t.dataset.go);
+  });
+</script>
+</body>
+</html>
