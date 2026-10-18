@@ -144,8 +144,11 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   const fit = useFitGrid(fitConfig(false));
 
   const activeBlankEl = useRef<HTMLSpanElement | null>(null);
-  const { drag, over, bind } = useDrag<TileId>({
-    getTarget: () => activeBlankEl.current?.getBoundingClientRect() ?? null,
+  const { drag, over, bind } = useDrag<TileId, 'blank'>({
+    getTargets: () => {
+      const rect = activeBlankEl.current?.getBoundingClientRect();
+      return rect ? [{ id: 'blank', rect }] : [];
+    },
     canDrag: () => phase === 'playing' && !shakeTile && activeBlank >= 0,
     onDrop: dropTile,
     onTap: (id) => {

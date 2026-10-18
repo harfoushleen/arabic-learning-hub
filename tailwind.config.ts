@@ -34,6 +34,11 @@ export default {
           '60%': { transform: 'translateX(-5px)' },
           '80%': { transform: 'translateX(5px)' },
         },
+        // Erases a pathLength=1 SVG line from its end back toward its start.
+        retract: {
+          from: { strokeDashoffset: '0' },
+          to: { strokeDashoffset: '1' },
+        },
         wiggle: {
           '0%, 100%': { transform: 'rotate(0deg)' },
           '25%': { transform: 'rotate(-6deg)' },
@@ -63,6 +68,7 @@ export default {
         shake: 'shake 0.45s ease-in-out',
         pop: 'pop 0.5s ease-out',
         wiggle: 'wiggle 0.45s ease-in-out',
+        retract: 'retract 0.2s ease-in forwards',
         hint: 'hint 1.2s ease-out',
         'fade-in': 'fade-in 0.2s ease-out',
         'rise-in': 'rise-in 0.3s ease-out',

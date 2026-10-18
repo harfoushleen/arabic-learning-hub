@@ -6,7 +6,7 @@ const ComingSoon = lazy(() => import('./ComingSoonGame'));
 
 export const gameRegistry: Record<GameId, LazyExoticComponent<ComponentType<GameProps>>> = {
   'word-picture': lazy(() => import('./WordPictureGame')),
-  'sentence-picture': ComingSoon,
+  'sentence-picture': lazy(() => import('./SentencePictureGame')),
   'letter-forms': lazy(() => import('./LetterFormsGame')),
   unscramble: ComingSoon,
 };

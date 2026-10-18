@@ -8,8 +8,8 @@ export interface FitGridConfig {
   inset?: number;
   minWidth: number;
   maxWidth: number;
-  /** Full card height (picture + slot + padding) for a card `w` px wide. */
-  cardHeight: (w: number) => number;
+  /** Full card height (picture + slot + padding) for a card `w` px wide in an area `areaWidth` wide. */
+  cardHeight: (w: number, areaWidth: number) => number;
   /** Height needed below the grid (e.g. gap + word bank) for card width `w` in an area `areaWidth` wide. */
   reserveHeight?: (w: number, areaWidth: number) => number;
   /** Column counts to try; defaults to balanced layouts for `count`. */
@@ -45,7 +45,7 @@ export function solveFitGrid(areaWidth: number, areaHeight: number, cfg: FitGrid
 
   for (const cols of cfg.columns ?? balancedColumns(count)) {
     const rows = Math.ceil(count / cols);
-    const total = (w: number) => rows * cardHeight(w) + (rows - 1) * gap + (reserveHeight?.(w, width) ?? 0);
+    const total = (w: number) => rows * cardHeight(w, width) + (rows - 1) * gap + (reserveHeight?.(w, width) ?? 0);
     const wMax = Math.floor(Math.min(maxWidth, (width - (cols - 1) * gap) / cols));
     if (wMax <= 0) continue;
     const lo = Math.min(minWidth, wMax);
@@ -53,7 +53,7 @@ export function solveFitGrid(areaWidth: number, areaHeight: number, cfg: FitGrid
     if (total(lo) > height) {
       const t = total(lo);
       if (!fallback || t < fallback.total) {
-        fallback = { total: t, layout: { cols, rows, cardWidth: lo, cardHeight: cardHeight(lo), fits: false } };
+        fallback = { total: t, layout: { cols, rows, cardWidth: lo, cardHeight: cardHeight(lo, width), fits: false } };
       }
       continue;
     }
@@ -66,13 +66,13 @@ export function solveFitGrid(areaWidth: number, areaHeight: number, cfg: FitGrid
       if (total(mid) <= height) a = mid;
       else b = mid - 1;
     }
-    if (!best || a > best.cardWidth) best = { cols, rows, cardWidth: a, cardHeight: cardHeight(a), fits: true };
+    if (!best || a > best.cardWidth) best = { cols, rows, cardWidth: a, cardHeight: cardHeight(a, width), fits: true };
   }
 
   if (best) return best;
   if (fallback) return fallback.layout;
   const w = Math.max(1, Math.floor(Math.min(width, maxWidth)));
-  return { cols: 1, rows: count, cardWidth: w, cardHeight: cardHeight(w), fits: false };
+  return { cols: 1, rows: count, cardWidth: w, cardHeight: cardHeight(w, width), fits: false };
 }
 
 interface Area {

@@ -8,14 +8,17 @@ export function GameFinal({
   stars,
   onRestart,
   onExit,
+  confetti = 'perfect',
 }: {
   stars: 1 | 2 | 3;
   onRestart: () => void;
   onExit?: () => void;
+  /** 'perfect': confetti only for 3 stars (Game 1); 'always': on every finish. */
+  confetti?: 'perfect' | 'always';
 }) {
   useEffect(() => {
-    if (stars === 3) celebrate();
-  }, [stars]);
+    if (stars === 3 || confetti === 'always') celebrate();
+  }, [stars, confetti]);
 
   // Sized from the visible height so it always fits inside the stage.
   return (
