@@ -70,7 +70,7 @@ const unit1Vocab: VocabWord[] = [
   { id: 'tabl', text: 'طَبْل', emoji: '🥁' },
   { id: 'zabib', text: 'زَبِيب', emoji: '🍇', art: { src: '/art/zabib.webp', type: 'webp' } },
   { id: 'barid', text: 'بَارِد', emoji: '🥶', art: { src: '/art/barid.webp', type: 'webp', still: '/art/barid-still.webp' }, confusableWith: ['razi'] },
-  { id: 'duroob', text: 'دُرُوب', emoji: '🛣️', art: { src: '/art/duroob.json', type: 'lottie' } },
+  { id: 'darb', text: 'دَرْب', emoji: '🛣️', art: { src: '/art/darb.json', type: 'lottie' } },
   { id: 'arnab', text: 'أَرْنَب', emoji: '🐇' },
   { id: 'ab', text: 'أَب', emoji: '👨‍👦', art: { src: '/art/ab.webp', type: 'webp', still: '/art/ab-still.webp' }, confusableWith: ['razi', 'zizi'] },
   { id: 'laiba', text: 'لَعِبَ', emoji: '🤸', art: { src: '/art/laiba.json', type: 'lottie' } },
