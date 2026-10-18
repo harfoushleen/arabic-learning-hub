@@ -34,6 +34,11 @@ export default {
           '60%': { transform: 'translateX(-5px)' },
           '80%': { transform: 'translateX(5px)' },
         },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(-6deg)' },
+          '75%': { transform: 'rotate(6deg)' },
+        },
         pop: {
           '0%': { transform: 'scale(1)' },
           '35%': { transform: 'scale(1.07)' },
@@ -57,6 +62,7 @@ export default {
       animation: {
         shake: 'shake 0.45s ease-in-out',
         pop: 'pop 0.5s ease-out',
+        wiggle: 'wiggle 0.45s ease-in-out',
         hint: 'hint 1.2s ease-out',
         'fade-in': 'fade-in 0.2s ease-out',
         'rise-in': 'rise-in 0.3s ease-out',

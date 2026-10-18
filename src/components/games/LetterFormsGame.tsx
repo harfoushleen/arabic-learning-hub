@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { getUnit, type LetterForm, type LetterFormItem, type LetterFormPart } from '@/data/units';
 import { useFitGrid } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { useTimers } from '@/hooks/useTimers';
-import { joinedSegments, ZWJ } from '@/lib/arabicJoining';
+import { TATWEEL, worksheetSegments, ZWJ } from '@/lib/arabicJoining';
 import { celebrate } from '@/lib/celebrate';
 import { starsFor } from '@/lib/rounds';
 import { shuffle, shuffleAvoiding } from '@/lib/shuffle';
 import { cn } from '@/lib/utils';
 import { BigButton } from './BigButton';
+import { DraggableTile } from './drag/DraggableTile';
+import { useDrag, type DropResult } from './drag/useDrag';
 import { GameFinal } from './GameFinal';
 import { GameStage } from './GameStage';
 import type { GameProps } from './types';
@@ -24,6 +26,7 @@ const TILES: { id: TileId; form: LetterForm }[] = [
 const TILE_FOR_ANSWER: Record<LetterForm, TileId> = { 'بـ': 'initial', 'ـبـ': 'medial', 'ـب': 'final', 'ب': 'isolated' };
 
 const SHAKE_MS = 500;
+const WIGGLE_MS = 450;
 const POP_MS = 600;
 const HINT_MS = 1300;
 const WORD_HOLD_MS = 1200;
@@ -49,7 +52,8 @@ const blankBox = (font: number) => ({ width: Math.max(64, Math.round(font * 0.95
 /** Word font for a tile width, shrunk if the word (blanks drawn as boxes) wouldn't fit the row. */
 function wordFont(item: LetterFormItem, tile: number, areaWidth: number): number {
   let font = Math.round(clamp(tile * 0.7, 44, 110));
-  const text = item.parts.map((p) => (p.type === 'text' ? p.value : p.fill)).join('');
+  // Worst case: every letter plus the worksheet dashes beside the blanks.
+  const text = item.parts.map((p) => (p.type === 'text' ? p.value : p.fill)).join('') + TATWEEL.repeat(2);
   const blanks = item.parts.filter((p) => p.type === 'blank').length;
   const width = textWidth(text, font) * 1.08 + blanks * (blankBox(font).width + 8);
   if (width > areaWidth) font = Math.max(36, Math.floor((font * areaWidth) / width));
@@ -106,6 +110,7 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   const [phase, setPhase] = useState<Phase>('playing');
   const [filled, setFilled] = useState<(string | null)[]>(() => words[0]!.parts.map(() => null));
   const [shakeTile, setShakeTile] = useState<TileId | null>(null);
+  const [wiggleTile, setWiggleTile] = useState<TileId | null>(null);
   const [hintTile, setHintTile] = useState<TileId | null>(null);
   const [pop, setPop] = useState(false);
   const [misses, setMisses] = useState<Readonly<Record<string, number>>>({});
@@ -125,8 +130,24 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
     reserveHeight: (w, areaWidth) => GAP + wordBlockHeight(wordFont(item, w, areaWidth - 2 * INSET)),
   });
 
-  function tapTile(id: TileId) {
-    if (phase !== 'playing' || shakeTile || activeBlank < 0) return;
+  const activeBlankEl = useRef<HTMLSpanElement | null>(null);
+  const { drag, over, bind } = useDrag<TileId>({
+    getTarget: () => activeBlankEl.current?.getBoundingClientRect() ?? null,
+    canDrag: () => phase === 'playing' && !shakeTile && activeBlank >= 0,
+    onDrop: dropTile,
+    onTap: (id) => {
+      // Tiles are only placed by dragging; a tap wiggles to say "drag me".
+      setWiggleTile(id);
+      later(() => setWiggleTile((cur) => (cur === id ? null : cur)), WIGGLE_MS);
+    },
+    onReturned: (id, reason) => {
+      if (reason !== 'wrong') return;
+      setShakeTile(id);
+      later(() => setShakeTile(null), SHAKE_MS);
+    },
+  });
+
+  function dropTile(id: TileId): DropResult {
     const blank = item.parts[activeBlank] as Extract<LetterFormPart, { type: 'blank' }>;
     const correct = TILE_FOR_ANSWER[blank.answer];
 
@@ -146,18 +167,17 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
           }
         }, WORD_HOLD_MS);
       }
-      return;
+      return 'correct';
     }
 
     const key = `${item.id}:${activeBlank}`;
     const count = (misses[key] ?? 0) + 1;
     setMisses({ ...misses, [key]: count });
-    setShakeTile(id);
-    later(() => setShakeTile(null), SHAKE_MS);
     if (count === 2) {
       setHintTile(correct);
       later(() => setHintTile((cur) => (cur === correct ? null : cur)), HINT_MS);
     }
+    return 'wrong';
   }
 
   function nextWord() {
@@ -203,6 +223,8 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
             activeBlank={activeBlank}
             font={wordFont(item, layout.cardWidth, areaWidth)}
             pop={pop}
+            blankRef={activeBlankEl}
+            over={over}
           />
 
           <div
@@ -221,21 +243,26 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
               </div>
             ) : (
               tileOrders[index]!.map((tile) => (
-                <button
+                <DraggableTile
                   key={tile.id}
-                  type="button"
-                  data-tile={tile.id}
-                  onClick={() => tapTile(tile.id)}
-                  disabled={phase !== 'playing'}
+                  id={tile.id}
+                  drag={drag}
+                  bind={bind}
+                  data={{
+                    'data-tile': tile.id,
+                    'data-hint': hintTile === tile.id,
+                    'data-wiggle': wiggleTile === tile.id,
+                  }}
                   style={{ width: layout.cardWidth, height: layout.cardWidth, fontSize: clamp(layout.cardWidth * 0.5, 48, 96) }}
                   className={cn(
-                    'game-piece flex items-center justify-center rounded-3xl border-2 border-white bg-white text-vowelled shadow-md transition-transform active:scale-95',
+                    'flex cursor-grab items-center justify-center rounded-3xl border-2 border-white bg-white text-vowelled shadow-md',
                     shakeTile === tile.id && 'animate-shake',
                     hintTile === tile.id && 'animate-hint',
+                    wiggleTile === tile.id && 'animate-wiggle',
                   )}
                 >
                   {tile.form}
-                </button>
+                </DraggableTile>
               ))
             )}
           </div>
@@ -245,24 +272,29 @@ function Session({ items, previousOrder, title, instruction, onRestart, onExit }
   );
 }
 
-/** The worksheet word: text as written, dashed boxes for missing letters, joined once a ب is placed. */
+/**
+ * The worksheet word: dashed boxes for missing letters with a tatweel beside them where the
+ * neighbor really connects (طَـ▢ـل); a placed ب joins its neighbors, and a completed word has no tatweel.
+ */
 function Word({
   item,
   filled,
   activeBlank,
   font,
   pop,
+  blankRef,
+  over,
 }: {
   item: LetterFormItem;
   filled: (string | null)[];
   activeBlank: number;
   font: number;
   pop: boolean;
+  blankRef: RefObject<HTMLSpanElement | null>;
+  over: boolean;
 }) {
   const box = blankBox(font);
-  // joinedSegments adds ZWJs only next to letters that are actually there, so empty blanks never
-  // reveal how the missing ب connects.
-  const segments = joinedSegments(item.parts, filled);
+  const segments = worksheetSegments(item.parts, filled);
   return (
     <div
       data-word={item.id}
@@ -274,12 +306,18 @@ function Word({
         seg.isBlank && seg.text.replaceAll(ZWJ, '') === '' ? (
           <span
             key={seg.key}
+            ref={i === activeBlank ? blankRef : undefined}
             data-blank={i}
             data-active={i === activeBlank}
+            data-over={i === activeBlank && over}
             aria-label="فَرَاغ"
             className={cn(
               'mx-1 inline-block rounded-2xl border-[3px] border-dashed align-middle transition-colors',
-              i === activeBlank ? 'border-amber-400 bg-amber-50' : 'border-slate-300 bg-slate-50/60',
+              i !== activeBlank
+                ? 'border-slate-300 bg-slate-50/60'
+                : over
+                  ? 'scale-105 border-emerald-400 bg-emerald-50'
+                  : 'border-amber-400 bg-amber-50',
             )}
             style={box}
           />
