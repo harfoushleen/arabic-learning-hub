@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { getUnit, type SentencePictureItem } from '@/data/units';
-import { useFitGrid } from '@/hooks/useFitGrid';
+import { solveFitGrid, useFitGrid, type FitGridConfig } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { useTimers } from '@/hooks/useTimers';
 import { starsFor } from '@/lib/rounds';
@@ -26,7 +26,10 @@ const WIGGLE_MS = 450;
 const DONE_DELAY_MS = 900;
 
 const ROW_GAP = 16;
-const GUTTER = 88; // between the columns: room for the dots and the lines
+// Gap between the columns (dots + lines). We aim for ~30% of the width so children draw long,
+// clear lines, trading at most a quarter of the row height for it (see the gutter search below).
+const MIN_GUTTER = 88;
+const MAX_GUTTER = 360;
 const INSET = 8;
 const MAX_CONTENT = 1200;
 const MIN_ROW = 96;
@@ -66,11 +69,11 @@ function lineCount(text: string, font: number, width: number): number {
 }
 
 /** Row geometry for row height `h` in a content box `contentWidth` wide. */
-function rowMetrics(h: number, contentWidth: number) {
+function rowMetrics(h: number, contentWidth: number, gutter = MIN_GUTTER) {
   const pictureWidth = Math.round((h * 4) / 3);
-  const sentenceWidth = contentWidth - pictureWidth - GUTTER;
+  const sentenceWidth = contentWidth - pictureWidth - gutter;
   const font = Math.round(clamp(h * 0.2, MIN_TEXT, 44));
-  return { h, pictureWidth, sentenceWidth, font, textWidth: sentenceWidth - 2 * PAD - DOT / 2 };
+  return { h, pictureWidth, sentenceWidth, gutter, font, textWidth: sentenceWidth - 2 * PAD - DOT / 2 };
 }
 
 const contentWidthFor = (areaWidth: number) => Math.min(areaWidth - 2 * INSET, MAX_CONTENT);
@@ -131,11 +134,13 @@ function Session({ items, title, instruction, onRestart, onExit }: SessionProps)
 
   const longest = (m: ReturnType<typeof rowMetrics>) =>
     Math.max(...items.map((it) => lineCount(it.sentence, m.font, m.textWidth)));
+  const textFits = (m: ReturnType<typeof rowMetrics>) =>
+    m.textWidth > 0 && Math.ceil(longest(m) * m.font * LINE + 2 * PAD) <= m.h;
 
   // The fit hook solves for the ROW HEIGHT (its "card width"): a row height fits only if the
-  // longest sentence fits in the space the picture leaves. Taller rows mean a wider picture and a
-  // narrower sentence, so the search is monotonic.
-  const fit = useFitGrid({
+  // longest sentence fits in the space the picture and gutter leave. Taller rows mean a wider
+  // picture and a narrower sentence, so the search is monotonic.
+  const fitConfig = (gutter: number): FitGridConfig => ({
     count: items.length,
     columns: [1],
     gap: ROW_GAP,
@@ -143,12 +148,9 @@ function Session({ items, title, instruction, onRestart, onExit }: SessionProps)
     minWidth: MIN_ROW,
     maxWidth: MAX_ROW,
     // areaWidth here already excludes the inset.
-    cardHeight: (h, areaWidth) => {
-      const m = rowMetrics(h, Math.min(areaWidth, MAX_CONTENT));
-      if (m.textWidth <= 0) return Infinity;
-      return Math.ceil(longest(m) * m.font * LINE + 2 * PAD) <= h ? h : Infinity;
-    },
+    cardHeight: (h, areaWidth) => (textFits(rowMetrics(h, Math.min(areaWidth, MAX_CONTENT), gutter)) ? h : Infinity),
   });
+  const fit = useFitGrid(fitConfig(MIN_GUTTER));
 
   // Card and dot elements, for hit-testing and for drawing the lines.
   const cards = useRef(new Map<Key, HTMLElement>());
@@ -233,9 +235,25 @@ function Session({ items, title, instruction, onRestart, onExit }: SessionProps)
     return 'wrong';
   }
 
-  const layout = fit.layout;
-  const ready = fontsReady && layout !== null && fit.area !== null;
-  const m = ready ? rowMetrics(layout.cardWidth, contentWidthFor(fit.area!.width)) : null;
+  // Widest gutter (up to ~30% of the width) whose fit keeps rows at >= 75% of the largest height.
+  const sized = (() => {
+    const base = fit.layout;
+    const area = fit.area;
+    if (!fontsReady || !base || !area) return null;
+    const contentWidth = contentWidthFor(area.width);
+    if (base.fits) {
+      const target = Math.round(clamp(contentWidth * 0.3, MIN_GUTTER, MAX_GUTTER));
+      for (let g = target; g > MIN_GUTTER; g -= 8) {
+        const wider = solveFitGrid(area.width, area.height, fitConfig(g));
+        if (wider.fits && wider.cardWidth >= base.cardWidth * 0.75) {
+          return { layout: wider, m: rowMetrics(wider.cardWidth, contentWidth, g) };
+        }
+      }
+    }
+    return { layout: base, m: rowMetrics(base.cardWidth, contentWidth) };
+  })();
+  const layout = sized?.layout ?? null;
+  const m = sized?.m ?? null;
 
   let overlay = null;
   if (finished) {
@@ -282,12 +300,12 @@ function Session({ items, title, instruction, onRestart, onExit }: SessionProps)
       progress={{ total: items.length, current: finished ? items.length : matched.length }}
       onClose={onExit}
       playAreaRef={fit.ref}
-      scrollable={ready && !layout.fits}
-      rotateHint={ready && !layout.fits && fit.fitsRotated}
+      scrollable={layout !== null && !layout.fits}
+      rotateHint={layout !== null && !layout.fits && fit.fitsRotated}
       overlay={overlay}
       overlayOpaque
     >
-      {ready && m && (
+      {layout && m && !finished && (
         <div
           className={cn('flex min-h-full flex-col items-center', layout.fits ? 'justify-center' : 'justify-start')}
           style={{ padding: INSET }}
@@ -306,7 +324,7 @@ function Session({ items, title, instruction, onRestart, onExit }: SessionProps)
                   data-row-sentence={sentence.id}
                   data-row-picture={picture.id}
                   className="flex items-center"
-                  style={{ gap: GUTTER, [layout.fits ? 'height' : 'minHeight']: m.h }}
+                  style={{ gap: m.gutter, [layout.fits ? 'height' : 'minHeight']: m.h }}
                 >
                   {/* Sentence: RTL start (right). Its dot faces the gutter (left edge). */}
                   <div

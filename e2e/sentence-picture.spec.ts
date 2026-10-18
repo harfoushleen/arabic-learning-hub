@@ -103,6 +103,7 @@ for (const vp of VIEWPORTS) {
         await expect(page.locator(`[data-line="${id}"]`)).toBeAttached();
       }
       await expect(page.getByRole('button', { name: 'أَعِدِ اللُّعْبَةَ' })).toBeVisible();
+      await expect(page.locator('[data-lines], [data-line]')).toHaveCount(0); // no lines over the end screen
       await check('final screen');
     });
   });
