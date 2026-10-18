@@ -4,7 +4,7 @@ Every image in `public/images/` must be cartoon/illustrated, from a licensed sou
 
 | File | Source URL | Author | License |
 | --- | --- | --- | --- |
-| `game-2/image-1.png`, `game-2/image-2.png`, `game-2/image-3.png` | — | Publisher/author: TBD | Unit 1 sentence–picture worksheet illustrations from the class textbook, supplied by the teacher for classroom use. |
+| `game-2/image-1.png`, `game-2/image-2.jpg`, `game-2/image-3.jpg` | — | Publisher/author: TBD | Unit 1 sentence–picture worksheet illustrations from the class textbook, supplied by the teacher for classroom use. |
 
 ## Vocabulary images
 
