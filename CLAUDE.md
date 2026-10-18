@@ -18,7 +18,7 @@
 
 Vite + React 19 + TypeScript (strict) + Tailwind CSS v3 + shadcn/ui. RTL everywhere (`<html lang="ar" dir="rtl">`).
 
-Fonts: Cairo (UI/headings), Tajawal (body). Pastel palette; background #FBF7EF.
+Fonts (self-hosted via @fontsource, Arabic subset only): Noto Naskh Arabic 700 for all vowelled text; Cairo 800 only for unvowelled display letters. Pastel palette; background #FBF7EF.
 
 
 
@@ -48,6 +48,11 @@ Fonts: Cairo (UI/headings), Tajawal (body). Pastel palette; background #FBF7EF.
 
 - Wherever possible, render a completed word as ONE text node.
 
+## Tashkeel rendering
+
+- All vowelled text (game content and vowelled buttons/labels) uses the `text-vowelled` class: Noto Naskh Arabic 700, line-height ≥ 1.8, no letter-spacing. Cairo misplaces stacked marks (e.g. shadda + damma on lam), so never use it for vowelled text.
+- Leave enough vertical room that marks are never clipped by `overflow-hidden`; never use a weight that isn't loaded (no faux bold) — load only the weights we use, Arabic subset only.
+
 
 
 ## Conventions
@@ -58,6 +63,8 @@ Fonts: Cairo (UI/headings), Tajawal (body). Pastel palette; background #FBF7EF.
 
 - Games read content from `units.ts` via `unitId` prop; no hardcoded words in components.
 
+- Every game randomizes its content order on every open and every replay. Answer options never line up with their targets or match the correct order. Use src/lib/shuffle.ts. Games 2–4 follow this too: Game 2 shuffles sentences and pictures independently with no row aligned with its match; Game 3 shuffles the word order and the 4 choice tiles per word; Game 4 shuffles set order, and its tiles are never in the correct order.
+
 - Before finishing any task, run `npm run build`, `npx tsc --noEmit`, and `npx vitest run`.
 
 ## Images
@@ -66,3 +73,7 @@ Fonts: Cairo (UI/headings), Tajawal (body). Pastel palette; background #FBF7EF.
 - Vocab images: `public/images/characters/` (razi, zizi) and `public/images/unit-1/<word-id>.<ext>`.
 - Game 2 scene images: `public/images/game-2/image-1..3.<ext>` (supplied by us, don't replace).
 - Every image/audio path in `units.ts` must exist in `public/` (enforced by a vitest test).
+
+## Git
+- Never commit, branch, or push — the user does git.
+- At the end of every task: list the changed files and give one `git add` line and a one-line commit message.

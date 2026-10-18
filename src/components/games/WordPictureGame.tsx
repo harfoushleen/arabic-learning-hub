@@ -4,7 +4,8 @@ import { getUnit, type VocabWord } from '@/data/units';
 import { useFitGrid } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { buildRounds, starsFor } from '@/lib/rounds';
-import { cn, prefersReducedMotion, shuffle } from '@/lib/utils';
+import { derange } from '@/lib/shuffle';
+import { cn, prefersReducedMotion } from '@/lib/utils';
 import { BigButton } from './BigButton';
 import { GameStage } from './GameStage';
 import type { GameProps } from './types';
@@ -21,7 +22,7 @@ const INSET = 8; // room for the placed-card glow and the lifted chip
 const BANK_GAP = 12;
 const MIN_CARD = 140;
 const MAX_CARD = 320;
-const MIN_CHIP_H = 56;
+const MIN_CHIP_H = 60; // fits 28px text at line-height 1.8 inside the slot border
 const MIN_TEXT = 28;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -31,7 +32,7 @@ function cardMetrics(w: number) {
   const pad = Math.round(clamp(w * 0.045, 6, 14));
   const picH = Math.round((w - 2 * pad) * 0.72);
   const slotH = Math.round(clamp(w * 0.3, MIN_CHIP_H, 96));
-  const font = Math.round(clamp(slotH * 0.5, MIN_TEXT, 48));
+  const font = Math.floor(clamp((slotH - 8) / 1.8, MIN_TEXT, 48)); // 1.8 line-height + border/padding
   return { pad, picH, slotH, font, emoji: Math.round(w * 0.55), height: 2 * pad + picH + pad + slotH };
 }
 type CardMetrics = ReturnType<typeof cardMetrics>;
@@ -40,7 +41,7 @@ let measureCtx: CanvasRenderingContext2D | null | undefined;
 function textWidth(text: string, fontPx: number): number {
   measureCtx ??= document.createElement('canvas').getContext('2d');
   if (!measureCtx) return text.length * fontPx * 0.6;
-  measureCtx.font = `700 ${fontPx}px Cairo, sans-serif`;
+  measureCtx.font = `700 ${fontPx}px "Noto Naskh Arabic", serif`;
   return measureCtx.measureText(text).width;
 }
 
@@ -74,7 +75,7 @@ export default function WordPictureGame({ unitId, onExit }: GameProps) {
   if (!unit || !game) {
     return (
       <GameStage onClose={onExit}>
-        <p className="p-8 text-center font-cairo text-3xl">لَا تُوجَدُ كَلِمَاتٌ</p>
+        <p className="p-8 text-center text-vowelled text-3xl">لَا تُوجَدُ كَلِمَاتٌ</p>
       </GameStage>
     );
   }
@@ -106,8 +107,10 @@ interface SessionProps {
 }
 
 function Session({ words, title, instruction, onRestart, onExit }: SessionProps) {
+  // Fresh order on every open and every replay (the session remounts). The bank is deranged
+  // so no chip sits in the same position as its picture.
   const [rounds] = useState<Round[]>(() =>
-    buildRounds(words).map((r) => ({ words: r, bank: shuffle(r.map((w) => w.id)) })),
+    buildRounds(words).map((r) => ({ words: r, bank: derange(r.map((w) => w.id)) })),
   );
   const [roundIndex, setRoundIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('playing');
@@ -120,7 +123,7 @@ function Session({ words, title, instruction, onRestart, onExit }: SessionProps)
   const [failedImages, setFailedImages] = useState<ReadonlySet<string>>(() => new Set());
   const [readyRound, setReadyRound] = useState(-1);
   const later = useTimers();
-  useFontsReady(); // re-measure chip text once Cairo is loaded
+  useFontsReady(); // re-measure chip text once Naskh is loaded
 
   const round = rounds[roundIndex]!;
   const byId = new Map(words.map((w) => [w.id, w]));
@@ -216,7 +219,7 @@ function Session({ words, title, instruction, onRestart, onExit }: SessionProps)
   } else if (phase === 'round-complete') {
     overlay = (
       <div className="flex animate-rise-in flex-col items-center gap-[clamp(12px,calc(var(--app-h,100dvh)*0.04),32px)] rounded-[2rem] bg-white px-10 py-[clamp(12px,calc(var(--app-h,100dvh)*0.04),40px)] shadow-xl">
-        <p className="font-cairo text-[clamp(28px,calc(var(--app-h,100dvh)*0.07),64px)] font-extrabold leading-[1.5]" role="status">
+        <p className="text-vowelled text-[clamp(28px,calc(var(--app-h,100dvh)*0.07),64px)]" role="status">
           أَحْسَنْتَ! 🌟
         </p>
         <BigButton onClick={nextRound} autoFocus>
@@ -345,11 +348,11 @@ function PlayArea({
                 )}
               >
                 {isPlaced ? (
-                  <span style={textStyle} className="font-cairo font-bold leading-[1.6] text-emerald-800">
+                  <span style={textStyle} className="text-vowelled text-emerald-800">
                     {word.text}
                   </span>
                 ) : wrongHere ? (
-                  <span style={textStyle} className="animate-shake rounded-2xl bg-white px-4 font-cairo font-bold leading-[1.6] shadow">
+                  <span style={textStyle} className="animate-shake rounded-2xl bg-white px-4 text-vowelled shadow">
                     {wrongHere.text}
                   </span>
                 ) : null}
@@ -372,7 +375,7 @@ function PlayArea({
               aria-pressed={isSelected}
               style={{ width: chipWidth(word.text, m), height: m.slotH, ...textStyle }}
               className={cn(
-                'game-piece flex items-center justify-center rounded-2xl border-2 border-white bg-white font-cairo font-bold leading-[1.6] shadow-md transition-transform duration-200',
+                'game-piece flex items-center justify-center rounded-2xl border-2 border-white bg-white text-vowelled shadow-md transition-transform duration-200',
                 isSelected && '-translate-y-2 scale-105 border-amber-300 bg-pastel-yellow shadow-xl',
                 wrong?.chipId === word.id && 'invisible',
               )}
@@ -417,7 +420,7 @@ function PictureCard({
   }
   return (
     <span role="img" aria-label={word.text} style={{ height }} className={cn(frame, pastel, 'flex items-center justify-center')}>
-      <span aria-hidden className="leading-none" style={{ fontSize: emojiSize }}>
+      <span aria-hidden className="font-emoji leading-none" style={{ fontSize: emojiSize }}>
         {word.emoji}
       </span>
     </span>
@@ -440,7 +443,7 @@ function FinalScreen({
   // Sized from the visible height so it always fits inside the stage.
   return (
     <div className="flex flex-col items-center gap-[clamp(12px,calc(var(--app-h,100dvh)*0.04),40px)]">
-      <p className="font-cairo text-[clamp(28px,calc(var(--app-h,100dvh)*0.07),64px)] font-extrabold leading-[1.5]">
+      <p className="text-vowelled text-[clamp(28px,calc(var(--app-h,100dvh)*0.07),64px)]">
         أَحْسَنْتَ! 🌟
       </p>
       <div className="flex gap-4" role="img" aria-label={`${stars} / 3`}>
@@ -449,7 +452,7 @@ function FinalScreen({
             key={n}
             aria-hidden
             className={cn(
-              'text-[clamp(40px,calc(var(--app-h,100dvh)*0.12),120px)] leading-none',
+              'font-emoji text-[clamp(40px,calc(var(--app-h,100dvh)*0.12),120px)] leading-none',
               n > stars && 'opacity-25 grayscale',
             )}
           >

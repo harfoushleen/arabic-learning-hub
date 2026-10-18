@@ -10,7 +10,7 @@ export function BigButton({
     <button
       type="button"
       className={cn(
-        'game-piece min-h-[64px] min-w-[160px] rounded-2xl px-8 font-cairo text-[28px] font-bold leading-[1.6] shadow-md transition-transform active:scale-95 md:text-[32px]',
+        'game-piece min-h-[64px] min-w-[160px] rounded-2xl px-8 py-1 text-vowelled text-[28px] shadow-md transition-transform active:scale-95 md:text-[32px]',
         variant === 'primary' ? 'bg-emerald-300 text-emerald-950' : 'bg-pastel-lilac text-ink',
         className,
       )}

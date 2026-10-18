@@ -7,7 +7,7 @@ export function useFontsReady(): boolean {
     let alive = true;
     const fonts = document.fonts;
     if (!fonts) return;
-    Promise.all([fonts.load('700 32px Cairo', 'بَ'), fonts.ready])
+    Promise.all([fonts.load('700 32px "Noto Naskh Arabic"', 'بَ'), fonts.ready])
       .catch(() => undefined)
       .then(() => alive && setReady(true));
     return () => {

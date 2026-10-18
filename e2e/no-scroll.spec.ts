@@ -125,6 +125,9 @@ for (const vp of VIEWPORTS) {
       await expect(cards.first()).toBeVisible();
       await settle();
       await expectFits(page, 'round start', phone);
+      const cardIds = await cards.evaluateAll((els) => els.map((el) => el.dataset.card));
+      const chipIds = await page.locator('[data-chip]').evaluateAll((els) => els.map((el) => el.dataset.chip));
+      expect(chipIds.filter((id, i) => id === cardIds[i]), 'chips lined up with their pictures').toEqual([]);
 
       // 2. After selecting a chip.
       await press(page.locator('[data-chip]').first());
@@ -150,13 +153,16 @@ for (const vp of VIEWPORTS) {
       await expectFits(page, 'round complete', phone);
 
       // 5. Final screen: play every remaining round.
+      // A round shows only after its images decode, so wait for cards OR the final screen.
+      const restart = page.getByRole('button', { name: 'أَعِدِ اللُّعْبَةَ' });
       await press(nextButton);
-      while (await cards.first().isVisible().catch(() => false)) {
+      for (;;) {
+        await expect(cards.first().or(restart)).toBeVisible();
+        if (await restart.isVisible()) break;
         await placeAll();
         await expect(nextButton).toBeVisible();
         await press(nextButton);
       }
-      await expect(page.getByRole('button', { name: 'أَعِدِ اللُّعْبَةَ' })).toBeVisible();
       await settle();
       await expectFits(page, 'final screen', phone);
     });

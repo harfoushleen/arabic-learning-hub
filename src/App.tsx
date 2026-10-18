@@ -39,7 +39,7 @@ export default function App() {
 function UnitList({ onPick }: { onPick: (id: string) => void }) {
   return (
     <>
-      <h1 className="text-center font-cairo text-[40px] font-extrabold leading-[1.6]">أَلْعَابُ الحُرُوفِ</h1>
+      <h1 className="text-center text-vowelled text-[40px]">أَلْعَابُ الحُرُوفِ</h1>
       <div className="flex flex-wrap justify-center gap-6">
         {units.map((unit) => (
           <button
@@ -57,7 +57,7 @@ function UnitList({ onPick }: { onPick: (id: string) => void }) {
                 </span>
               ))}
             </span>
-            <span className="font-cairo text-[32px] font-bold leading-[1.6]">{unit.title}</span>
+            <span className="text-vowelled text-[32px]">{unit.title}</span>
           </button>
         ))}
       </div>
@@ -72,11 +72,11 @@ function UnitView({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; on
         <button
           type="button"
           onClick={onBack}
-          className="game-piece flex min-h-[56px] items-center gap-2 rounded-2xl bg-white px-5 font-cairo text-[24px] font-bold shadow-md transition-transform active:scale-95"
+          className="game-piece flex min-h-[56px] items-center gap-2 rounded-2xl bg-white px-5 text-vowelled text-[24px] shadow-md transition-transform active:scale-95"
         >
           <span aria-hidden>→</span> عَوْدَة
         </button>
-        <h1 className="flex-1 text-center font-cairo text-[36px] font-extrabold leading-[1.6]">{unit.title}</h1>
+        <h1 className="flex-1 text-center text-vowelled text-[36px]">{unit.title}</h1>
         <span className="hidden w-[120px] sm:block" aria-hidden />
       </header>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -88,10 +88,10 @@ function UnitView({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; on
             onClick={() => onPlay(game.id)}
             className={`game-piece flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-[2rem] p-6 shadow-md transition-transform active:scale-[0.98] ${GAME_CARD_COLORS[i % GAME_CARD_COLORS.length]}`}
           >
-            <span aria-hidden className="text-[64px] leading-none">
+            <span aria-hidden className="font-emoji text-[64px] leading-none">
               {game.emoji}
             </span>
-            <span className="font-cairo text-[30px] font-bold leading-[1.6]">{game.title}</span>
+            <span className="text-vowelled text-[30px]">{game.title}</span>
           </button>
         ))}
       </div>
