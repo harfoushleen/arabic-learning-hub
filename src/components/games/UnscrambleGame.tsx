@@ -34,6 +34,9 @@ const LINE = 1.8; // text-vowelled line-height
 
 const pictureHeight = (w: number) => Math.round((w * 3) / 4);
 
+/** The full stop shown after the sentence's last slot. */
+const periodWidth = (font: number) => Math.ceil(font * 0.5);
+
 /** Rows a greedy flex-wrap needs for these widths. */
 function lineCount(widths: number[], max: number): number {
   let lines = 1;
@@ -74,6 +77,7 @@ function metrics(set: UnscrambleSet, font: number, areaWidth: number): Metrics {
   for (const answer of set.answers) {
     for (let n = 0; n <= answer.length; n++) {
       const widths = answer.map((id, i) => (i < n ? tileWidth[id]! : slotWidth));
+      widths[widths.length - 1]! += PIECE_GAP + periodWidth(font); // the full stop after the last slot
       stripLines = Math.max(stripLines, lineCount(widths, inner));
     }
   }
@@ -327,6 +331,14 @@ function Session({ sets: allSets, title, instruction, onRestart, onExit }: Sessi
                 />
               );
             })}
+            <span
+              aria-hidden
+              data-period
+              className={cn('flex shrink-0 items-end text-vowelled', complete ? 'text-emerald-900' : 'text-ink')}
+              style={{ height: m.pieceHeight, width: periodWidth(m.font), fontSize: m.font, marginInlineStart: -PIECE_GAP / 2 }}
+            >
+              .
+            </span>
           </div>
 
           {/* The word bank; once the sentence is done, the next button takes its place. */}
