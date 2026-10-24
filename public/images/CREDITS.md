@@ -14,6 +14,35 @@ Characters go in `characters/` (razi, zizi); unit words go in `unit-1/<word-id>.
 | --- | --- | --- | --- |
 | `unit-1/zara.jpg` | TBD | TBD | TBD — supplied by the teacher; confirm source and license |
 
+### Unit 2 (`unit-2/`)
+
+All supplied by the teacher (classroom slides). The animated ones were converted from GIF to animated WebP (`<id>.webp`, with a first-frame `<id>-still.webp`); the stills are used as supplied.
+
+| File | Source URL | Author | License |
+| --- | --- | --- | --- |
+| `unit-2/dirs.webp`, `unit-2/dirs-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/furshah.webp`, `unit-2/furshah-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/khuffash.webp`, `unit-2/khuffash-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/kursi.webp`, `unit-2/kursi-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/madrasa.webp`, `unit-2/madrasa-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/masrah.webp`, `unit-2/masrah-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/nasr.webp`, `unit-2/nasr-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/samak.webp`, `unit-2/samak-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/sayyara.webp`, `unit-2/sayyara-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/shaar.webp`, `unit-2/shaar-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/shubbak.webp`, `unit-2/shubbak-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/sinjab.webp`, `unit-2/sinjab-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/sulahfat.webp`, `unit-2/sulahfat-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/tawus.webp`, `unit-2/tawus-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/timsah.webp`, `unit-2/timsah-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/risala.jpg` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/risha.jpg` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/sahir.jpg` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/shahina.jpg` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/shawka.png` | — | TBD | Supplied by the teacher (classroom slides) |
+
+Words without a file yet (minshar, shams, lisan) show their Noto emoji.
+
 ## Emoji art (`public/emoji/`)
 
 Fetched by `scripts/fetch-emoji-assets.mjs`; shown in-app under the home screen's "credits" link.

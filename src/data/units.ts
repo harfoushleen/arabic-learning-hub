@@ -100,32 +100,32 @@ const unit1Vocab: VocabWord[] = [
   { id: 'laiba', text: 'لَعِبَ', emoji: '🤸', art: { src: '/art/laiba.json', type: 'lottie' } },
 ];
 
-// Unit 2 pictures are Noto emoji for now; drop real pictures in later with `image` / `art`.
-// TODO(teacher): confirm مُشْط، حَشَائِش، شَوْكَة (fork?)، مَدْرَسَة
+// Unit 2 pictures are in public/images/unit-2/<id>.<ext>; a word without one yet (minshar, shams, lisan) shows its Noto emoji.
+// TODO(teacher): confirm شَوْكَة (fork?)، مَدْرَسَة
 const unit2Vocab: VocabWord[] = [
   { id: 'minshar', text: 'مِنْشَارٌ', emoji: '🪚' },
   { id: 'shams', text: 'شَمْسٌ', emoji: '☀️' },
-  { id: 'musht', text: 'مُشْطٌ', emoji: '🪮' },
-  { id: 'hashaish', text: 'حَشَائِشُ', emoji: '🌿' },
-  { id: 'farasha', text: 'فَرَاشَةٌ', emoji: '🦋' },
-  { id: 'risha', text: 'رِيشَةٌ', emoji: '🪶' },
-  { id: 'shubbak', text: 'شُبَّاكٌ', emoji: '🪟' },
-  { id: 'shahina', text: 'شَاحِنَةٌ', emoji: '🚚' },
-  { id: 'shawka', text: 'شَوْكَةٌ', emoji: '🍴' },
-  { id: 'risala', text: 'رِسَالَةٌ', emoji: '✉️' },
-  { id: 'kursi', text: 'كُرْسِيٌّ', emoji: '🪑' },
-  { id: 'madrasa', text: 'مَدْرَسَةٌ', emoji: '🏫' },
-  { id: 'sayyara', text: 'سَيَّارَةٌ', emoji: '🚗' },
-  { id: 'timsah', text: 'تِمْسَاحٌ', emoji: '🐊' },
+  { id: 'shaar', text: 'شَعْرٌ', emoji: '💇', art: { src: '/images/unit-2/shaar.webp', type: 'webp', still: '/images/unit-2/shaar-still.webp' } },
+  { id: 'khuffash', text: 'خُفَّاشٌ', emoji: '🦇', art: { src: '/images/unit-2/khuffash.webp', type: 'webp', still: '/images/unit-2/khuffash-still.webp' } },
+  { id: 'furshah', text: 'فُرْشَاةٌ', emoji: '🪥', art: { src: '/images/unit-2/furshah.webp', type: 'webp', still: '/images/unit-2/furshah-still.webp' } },
+  { id: 'risha', text: 'رِيشَةٌ', emoji: '🪶', image: '/images/unit-2/risha.jpg' },
+  { id: 'shubbak', text: 'شُبَّاكٌ', emoji: '🪟', art: { src: '/images/unit-2/shubbak.webp', type: 'webp', still: '/images/unit-2/shubbak-still.webp' } },
+  { id: 'shahina', text: 'شَاحِنَةٌ', emoji: '🚚', image: '/images/unit-2/shahina.jpg' },
+  { id: 'shawka', text: 'شَوْكَةٌ', emoji: '🍴', image: '/images/unit-2/shawka.png' },
+  { id: 'risala', text: 'رِسَالَةٌ', emoji: '✉️', image: '/images/unit-2/risala.jpg' },
+  { id: 'kursi', text: 'كُرْسِيٌّ', emoji: '🪑', art: { src: '/images/unit-2/kursi.webp', type: 'webp', still: '/images/unit-2/kursi-still.webp' } },
+  { id: 'madrasa', text: 'مَدْرَسَةٌ', emoji: '🏫', art: { src: '/images/unit-2/madrasa.webp', type: 'webp', still: '/images/unit-2/madrasa-still.webp' } },
+  { id: 'sayyara', text: 'سَيَّارَةٌ', emoji: '🚗', art: { src: '/images/unit-2/sayyara.webp', type: 'webp', still: '/images/unit-2/sayyara-still.webp' } },
+  { id: 'timsah', text: 'تِمْسَاحٌ', emoji: '🐊', art: { src: '/images/unit-2/timsah.webp', type: 'webp', still: '/images/unit-2/timsah-still.webp' } },
   { id: 'lisan', text: 'لِسَانٌ', emoji: '👅' },
-  { id: 'tawus', text: 'طَاوُوسٌ', emoji: '🦚' },
-  { id: 'samak', text: 'سَمَكٌ', emoji: '🐟' },
-  { id: 'sinjab', text: 'سِنْجَابٌ', emoji: '🐿️' },
-  { id: 'masrah', text: 'مَسْرَحٌ', emoji: '🎭' },
-  { id: 'sulahfat', text: 'سُلَحْفَاةٌ', emoji: '🐢' },
-  { id: 'dirs', text: 'ضِرْسٌ', emoji: '🦷' },
-  { id: 'nasr', text: 'نَسْرٌ', emoji: '🦅' },
-  { id: 'sahir', text: 'سَاحِرٌ', emoji: '🧙' },
+  { id: 'tawus', text: 'طَاوُوسٌ', emoji: '🦚', art: { src: '/images/unit-2/tawus.webp', type: 'webp', still: '/images/unit-2/tawus-still.webp' } },
+  { id: 'samak', text: 'سَمَكٌ', emoji: '🐟', art: { src: '/images/unit-2/samak.webp', type: 'webp', still: '/images/unit-2/samak-still.webp' } },
+  { id: 'sinjab', text: 'سِنْجَابٌ', emoji: '🐿️', art: { src: '/images/unit-2/sinjab.webp', type: 'webp', still: '/images/unit-2/sinjab-still.webp' } },
+  { id: 'masrah', text: 'مَسْرَحٌ', emoji: '🎭', art: { src: '/images/unit-2/masrah.webp', type: 'webp', still: '/images/unit-2/masrah-still.webp' } },
+  { id: 'sulahfat', text: 'سُلَحْفَاةٌ', emoji: '🐢', art: { src: '/images/unit-2/sulahfat.webp', type: 'webp', still: '/images/unit-2/sulahfat-still.webp' } },
+  { id: 'dirs', text: 'ضِرْسٌ', emoji: '🦷', art: { src: '/images/unit-2/dirs.webp', type: 'webp', still: '/images/unit-2/dirs-still.webp' } },
+  { id: 'nasr', text: 'نَسْرٌ', emoji: '🦅', art: { src: '/images/unit-2/nasr.webp', type: 'webp', still: '/images/unit-2/nasr-still.webp' } },
+  { id: 'sahir', text: 'سَاحِرٌ', emoji: '🧙', image: '/images/unit-2/sahir.jpg' },
 ];
 
 export const units: Unit[] = [
@@ -414,15 +414,16 @@ export const units: Unit[] = [
       },
     ],
     unscramble: [],
+    // Fixed worksheet order for both the sentences and the cloud: the one game that is not shuffled.
     fillBlank: {
       words: [
-        { id: 'ilal-bustan', text: 'إِلَى البُسْتَان' },
-        { id: 'awraq', text: 'أَوْرَاق' },
-        { id: 'shajara', text: 'شَجَرَة' },
+        { id: 'awraquha', text: 'أَوْرَاقَهَا' },
         { id: 'mishmish', text: 'المِشْمِش' },
-        { id: 'akhdar', text: 'أَخْضَر' },
+        { id: 'ilal-bustan', text: 'إِلَى البُسْتَان' },
         { id: 'anis', text: 'أَنِيس' },
         { id: 'shadia', text: 'شَادْيَا' },
+        { id: 'shajara', text: 'شَجَرَة' },
+        { id: 'akhdar', text: 'أَخْضَر' },
       ],
       sentences: [
         {
@@ -433,21 +434,20 @@ export const units: Unit[] = [
             { type: 'text', value: '.' },
           ],
         },
-        // TODO(teacher): confirm the first word (اِخْضَرَّتْ أَوْرَاقُ ...)
         {
           id: 's2',
           parts: [
-            { type: 'text', value: 'اِخْضَرَّتْ ' },
-            { type: 'blank', accept: ['awraq'], fill: 'أَوْرَاقُ' },
-            { type: 'text', value: ' ' },
-            { type: 'blank', accept: ['shajara'], fill: 'شَجَرَةِ' },
-            { type: 'text', value: ' المِشْمِشِ.' },
+            { type: 'text', value: 'خَسِرَتْ ' },
+            { type: 'blank', accept: ['shajara'], fill: 'شَجَرَةُ' },
+            { type: 'text', value: ' المِشْمِشِ ' },
+            { type: 'blank', accept: ['awraquha'], fill: 'أَوْرَاقَهَا' },
+            { type: 'text', value: '.' },
           ],
         },
         {
           id: 's3',
           parts: [
-            { type: 'text', value: 'رَسَمَ أَنِيس وَشَادْيَا شَجَرَةَ ' },
+            { type: 'text', value: 'دَهَنَ أَنِيس وَشَادْيَا شَجَرَةَ ' },
             { type: 'blank', accept: ['mishmish'], fill: 'المِشْمِشِ' },
             { type: 'text', value: ' بِلَوْنٍ ' },
             { type: 'blank', accept: ['akhdar'], fill: 'أَخْضَرَ' },

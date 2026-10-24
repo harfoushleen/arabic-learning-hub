@@ -78,7 +78,7 @@ describe('units data', () => {
     expect(paths.length).toBeGreaterThan(0);
     const missing = paths
       .filter((p): p is string => p !== undefined)
-      .filter((p) => !p.startsWith('/art/') || !existsSync(publicDir + p.slice(1)));
+      .filter((p) => !(p.startsWith('/art/') || p.startsWith('/images/')) || !existsSync(publicDir + p.slice(1)));
     expect(missing).toEqual([]);
   });
 
@@ -152,6 +152,39 @@ describe('units data', () => {
       expect([...usedBy.keys()].sort(), 'cloud words no blank uses').toEqual([...wordIds].sort());
     },
   );
+
+  it('Unit 2 fill-blank: the worksheet\'s 7 cloud words and 4 sentences, in their fixed order, 7 blanks', () => {
+    const { words, sentences } = getUnit('unit-2')!.fillBlank!;
+    expect(words.map((w) => [w.id, w.text])).toEqual([
+      ['awraquha', 'أَوْرَاقَهَا'],
+      ['mishmish', 'المِشْمِش'],
+      ['ilal-bustan', 'إِلَى البُسْتَان'],
+      ['anis', 'أَنِيس'],
+      ['shadia', 'شَادْيَا'],
+      ['shajara', 'شَجَرَة'],
+      ['akhdar', 'أَخْضَر'],
+    ]);
+    // Each sentence as text with its blanks' accepted words in brackets.
+    const outline = sentences.map((s) =>
+      s.parts.map((p) => (p.type === 'text' ? p.value : `[${p.accept.join(',')}${p.fill ? `=${p.fill}` : ''}]`)).join(''),
+    );
+    expect(outline).toEqual([
+      'سَارَ أَنِيس وَشَادْيَا [ilal-bustan=إِلَى البُسْتَانِ].',
+      'خَسِرَتْ [shajara=شَجَرَةُ] المِشْمِشِ [awraquha=أَوْرَاقَهَا].',
+      'دَهَنَ أَنِيس وَشَادْيَا شَجَرَةَ [mishmish=المِشْمِشِ] بِلَوْنٍ [akhdar=أَخْضَرَ].',
+      'شَكَرَتْ شَجَرَةُ المِشْمِشِ [anis,shadia] وَ[anis,shadia].',
+    ]);
+    const blanks = sentences.flatMap((s) => s.parts.filter((p) => p.type === 'blank'));
+    expect(blanks).toHaveLength(7);
+    // Every word is used exactly once; the name pair counts once each.
+    const uses = new Map<string, number>();
+    for (const b of blanks) {
+      const share = 1 / b.accept.length;
+      for (const id of b.accept) uses.set(id, (uses.get(id) ?? 0) + share);
+    }
+    expect([...uses.values()].every((n) => n === 1)).toBe(true);
+    expect([...uses.keys()].sort()).toEqual(words.map((w) => w.id).sort());
+  });
 
   it('every emoji in units.ts has at least a static Noto SVG in public/emoji/', () => {
     const emoji = units.flatMap((u) => [...u.vocab.map((w) => w.emoji), ...letterFormItems(u).map((f) => f.emoji), ...u.games.map((g) => g.emoji)]);
