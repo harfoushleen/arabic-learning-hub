@@ -21,6 +21,13 @@ const PRESSABLE = cn(
   'focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-ink',
 );
 
+/** Grid span for a game card: an odd last card is wide; five games sit 3 + 2 on wide screens. */
+function spanClass(count: number, index: number): string {
+  if (count !== 5) return 'min-[560px]:odd:last:col-span-2';
+  if (index < 3) return 'min-[900px]:col-span-2';
+  return index === 4 ? 'min-[560px]:col-span-2 min-[900px]:col-span-3' : 'min-[900px]:col-span-3';
+}
+
 export default function App() {
   const { route, go, leave } = useHashRoute();
   const unit = route.unitId ? getUnit(route.unitId) : undefined;
@@ -206,9 +213,13 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
 
       <section
         aria-label="الأَلْعَابُ"
-        className="grid flex-1 auto-rows-[minmax(220px,auto)] grid-cols-1 gap-4 min-[560px]:auto-rows-[minmax(0,1fr)] min-[560px]:grid-cols-2"
+        className={cn(
+          'grid flex-1 auto-rows-[minmax(220px,auto)] grid-cols-1 gap-4 min-[560px]:auto-rows-[minmax(0,1fr)] min-[560px]:grid-cols-2',
+          // Five games: 3 + 2 on wide screens (two rows, so it still fits a laptop), the last one wide below that.
+          unit.games.length === 5 && 'min-[900px]:grid-cols-6',
+        )}
       >
-        {unit.games.map((game) => {
+        {unit.games.map((game, index) => {
           // Each card is filled with its game's own color; the emoji circle and pill are white.
           const t = THEME[game.theme];
           // A game with no content yet is a soft, unopenable "coming soon" card.
@@ -224,6 +235,7 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
               className={cn(
                 soon ? 'game-piece cursor-default opacity-60' : PRESSABLE,
                 'flex min-h-0 flex-col items-center justify-center rounded-card-lg border-4 border-white/60 px-[18px] text-center',
+                spanClass(unit.games.length, index),
                 t.bg,
               )}
               style={{ gap: v(4, 0.012, 10), paddingBlock: v(8, 0.025, 22) }}

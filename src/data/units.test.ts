@@ -95,11 +95,11 @@ describe('units data', () => {
     expect(missing).toEqual([]);
   });
 
-  it('Unit 2: the story, the four games, all with content', () => {
+  it('Unit 2: the story, the five games, all with content', () => {
     const unit = getUnit('unit-2')!;
     expect(unit.story).toBe('فِي البُسْتَانِ');
     expect(unit.letters).toEqual(['س', 'ش']);
-    expect(unit.games.map((g) => g.id)).toEqual(['word-picture', 'sentence-picture', 'letter-forms', 'fill-blank']);
+    expect(unit.games.map((g) => g.id)).toEqual(['word-picture', 'sentence-picture', 'letter-forms', 'fill-blank', 'unscramble']);
     expect(unit.games.filter((g) => !gameHasContent(unit, g.id))).toEqual([]);
     expect(unit.sentencePictures.map((s) => s.id)).toEqual(['sp-1', 'sp-2', 'sp-3', 'sp-4']);
     expect(unit.vocab).toHaveLength(23);
@@ -185,6 +185,17 @@ describe('units data', () => {
     }
     expect([...uses.values()].every((n) => n === 1)).toBe(true);
     expect([...uses.keys()].sort()).toEqual(words.map((w) => w.id).sort());
+  });
+
+  it('Unit 2 unscramble: one set per story sentence, same scene, tiles read as that sentence', () => {
+    const unit = getUnit('unit-2')!;
+    expect(unit.unscramble).toHaveLength(unit.sentencePictures.length);
+    for (const [i, sp] of unit.sentencePictures.entries()) {
+      const set = unit.unscramble[i]!;
+      const text = (id: string) => set.tiles.find((t) => t.id === id)!.text;
+      expect(set.answers[0]!.map(text).join(' ') + '.', set.id).toBe(sp.sentence);
+      expect(set.image, set.id).toBe(sp.image);
+    }
   });
 
   it('every emoji in units.ts has at least a static Noto SVG in public/emoji/', () => {

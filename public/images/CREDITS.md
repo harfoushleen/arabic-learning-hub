@@ -47,11 +47,13 @@ All supplied by the teacher (classroom slides). The animated ones were converted
 | `unit-2/fustan.webp`, `unit-2/fustan-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
 | `unit-2/ananas.webp`, `unit-2/ananas-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
 | `unit-2/kass.webp`, `unit-2/kass-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
-| `unit-2/shamaa.webp`, `unit-2/shamaa-still.webp` (candle, converted from a GIF) | https://commons.wikimedia.org/wiki/File:Jeeny_candle.gif | Jeeny | Public domain (Wikimedia Commons) |
+| `unit-2/shamaa.png` (candle, letter-forms word شَمْعَة) | — | TBD | Supplied by the user; confirm source and license |
 | `unit-2/shajara.png` (apple tree, letter-forms word شَجَرَة) | — | TBD | Supplied by the user; confirm source and license |
-| `unit-2/minshafa.svg` (towel, letter-forms word مِنْشَفَة) | — | Drawn for this project | Original artwork for this project (Noto has no towel emoji) |
+| `unit-2/minshafa.png` (towel, letter-forms word مِنْشَفَة) | — | TBD | Supplied by the user; confirm source and license |
+| `unit-2/jaysh.png` (soldier, letter-forms word جَيْش) | — | TBD | Supplied by the user; confirm source and license |
+| `unit-2/khashab.webp`, `unit-2/khashab-still.webp` (log, letter-forms word خَشَب, converted from a GIF) | https://jp.pinterest.com/pin/billeder--687573068114068176/ (image origin not stated on the pin) | TBD | Supplied by the user from Pinterest; confirm source and license |
 
-Words without a file yet (minshar in the word game; mistara, khashab, farasha, qirsh in letter-forms) show their Noto emoji. جَيْش shows Noto's animated saluting face (covered by the emoji credit below). The letter-forms word جَلَسَ reuses the word game's `kursi` picture; سَمَكَة keeps its 🐟 emoji.
+Words without a file yet (minshar in the word game; mistara, farasha, qirsh in letter-forms) show their Noto emoji. The letter-forms word جَلَسَ reuses the word game's `kursi` picture; سَمَكَة keeps its 🐟 emoji.
 
 ## Emoji art (`public/emoji/`)
 

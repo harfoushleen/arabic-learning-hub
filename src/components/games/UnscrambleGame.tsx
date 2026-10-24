@@ -111,6 +111,7 @@ export default function UnscrambleGame({ unitId, onExit }: GameProps) {
     <Session
       key={session}
       sets={sets}
+      inOrder={unit.inOrder}
       title={game.title}
       instruction={game.instruction}
       onRestart={() => setSession((s) => s + 1)}
@@ -123,15 +124,17 @@ type Phase = 'playing' | 'holding' | 'set-done' | 'finished';
 
 interface SessionProps {
   sets: UnscrambleSet[];
+  inOrder?: boolean;
   title: string;
   instruction: string;
   onRestart: () => void;
   onExit?: () => void;
 }
 
-function Session({ sets: allSets, title, instruction, onRestart, onExit }: SessionProps) {
-  // Fresh set order and tile order on every open and replay; tiles never start in an accepted order.
-  const [sets] = useState(() => shuffle(allSets));
+function Session({ sets: allSets, inOrder, title, instruction, onRestart, onExit }: SessionProps) {
+  // Fresh set order (unless the unit keeps its sentences in order) and tile order on every open and replay;
+  // tiles never start in an accepted order.
+  const [sets] = useState(() => (inOrder ? [...allSets] : shuffle(allSets)));
   const [banks] = useState(() => sets.map((s) => scrambleTiles(s.tiles, s.answers)));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('playing');

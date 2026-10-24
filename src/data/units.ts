@@ -68,6 +68,8 @@ export interface Unit {
   label: string;  // e.g. 'الوَحْدَةُ الأُولَى'
   story?: string; // e.g. 'فِي البُسْتَانِ', shown under the unit title and on the fill-blank game
   theme: Theme;
+  /** The sentence games (matching, unscramble) list their sentences in the order written here; pictures and word tiles still shuffle. */
+  inOrder?: boolean;
   games: GameDef[]; vocab: VocabWord[]; sentencePictures: SentencePictureItem[];
   letterForms: LetterFormSet[]; unscramble: UnscrambleSet[];
   fillBlank?: FillBlankData;
@@ -356,6 +358,7 @@ export const units: Unit[] = [
     title: 'حَرْفَا السِّينِ وَالشِّينِ',
     letters: ['س', 'ش'],
     story: 'فِي البُسْتَانِ',
+    inOrder: true,
     theme: 'mint',
     games: [
       {
@@ -390,6 +393,14 @@ export const units: Unit[] = [
         short: 'أَضَعُ الكَلِمَةَ فِي مَكَانِهَا',
         theme: 'lavender',
       },
+      {
+        id: 'unscramble',
+        title: 'تَرْتِيبُ الكَلِمَاتِ',
+        instruction: 'أُرَتِّبُ الكَلِمَاتِ التَّالِيَةَ فِي جُمْلَةٍ مُفِيدَةٍ',
+        emoji: '🧩',
+        short: 'أُرَتِّبُ الكَلِمَاتِ فِي جُمْلَةٍ',
+        theme: 'lemon',
+      },
     ],
     vocab: unit2Vocab,
     // The story, one sentence per scene, in story order.
@@ -421,17 +432,68 @@ export const units: Unit[] = [
         name: 'حَرْفُ الشِّينِ',
         instruction: 'أَضَعُ الحَرْفَ (ش) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
         items: [
-          letterFormItem('khashab', 'خَشَب', 'ش', '🪵'),
-          { ...letterFormItem('minshafa', 'مِنْشَفَة', 'ش', '🛁'), image: '/images/unit-2/minshafa.svg' }, // no towel emoji exists
+          { ...letterFormItem('khashab', 'خَشَب', 'ش', '🪵'), art: webpArt('khashab') },
+          { ...letterFormItem('minshafa', 'مِنْشَفَة', 'ش', '🛁'), image: '/images/unit-2/minshafa.png' }, // no towel emoji exists
           letterFormItem('farasha', 'فَرَاشَة', 'ش', '🦋'),
           letterFormItem('qirsh', 'قِرْش', 'ش', '🦈'),
-          letterFormItem('jaysh', 'جَيْش', 'ش', '🫡'), // Noto's animated saluting face
+          { ...letterFormItem('jaysh', 'جَيْش', 'ش', '💂'), image: '/images/unit-2/jaysh.png' },
           { ...letterFormItem('shajara', 'شَجَرَة', 'ش', '🌳'), image: '/images/unit-2/shajara.png' },
-          { ...letterFormItem('shamaa', 'شَمْعَة', 'ش', '🕯️'), art: webpArt('shamaa') },
+          { ...letterFormItem('shamaa', 'شَمْعَة', 'ش', '🕯️'), image: '/images/unit-2/shamaa.png' },
         ],
       },
     ],
-    unscramble: [],
+    // The four story sentences again (same scenes as sentencePictures), one word per tile.
+    unscramble: [
+      {
+        id: 'set-1',
+        image: '/images/unit-2/scene-1.jpg',
+        tiles: [
+          { id: 'bustan', text: 'البُسْتَانِ' },
+          { id: 'sara', text: 'سَارَ' },
+          { id: 'shadia', text: 'وَشَادْيَا' },
+          { id: 'ila', text: 'إِلَى' },
+          { id: 'anis', text: 'أَنِيس' },
+        ],
+        answers: [['sara', 'anis', 'shadia', 'ila', 'bustan']],
+      },
+      {
+        id: 'set-2',
+        image: '/images/unit-2/scene-2.jpg',
+        tiles: [
+          { id: 'awraquha', text: 'أَوْرَاقَهَا' },
+          { id: 'shajara', text: 'شَجَرَةُ' },
+          { id: 'khasirat', text: 'خَسِرَتْ' },
+          { id: 'mishmish', text: 'المِشْمِشِ' },
+        ],
+        answers: [['khasirat', 'shajara', 'mishmish', 'awraquha']],
+      },
+      {
+        id: 'set-3',
+        image: '/images/unit-2/scene-3.jpg',
+        tiles: [
+          { id: 'akhdar', text: 'أَخْضَرَ' },
+          { id: 'shajara', text: 'شَجَرَةَ' },
+          { id: 'dahana', text: 'دَهَنَ' },
+          { id: 'bilawnin', text: 'بِلَوْنٍ' },
+          { id: 'shadia', text: 'وَشَادْيَا' },
+          { id: 'mishmish', text: 'المِشْمِشِ' },
+          { id: 'anis', text: 'أَنِيس' },
+        ],
+        answers: [['dahana', 'anis', 'shadia', 'shajara', 'mishmish', 'bilawnin', 'akhdar']],
+      },
+      {
+        id: 'set-4',
+        image: '/images/unit-2/scene-4.png',
+        tiles: [
+          { id: 'shadia', text: 'وَشَادْيَا' },
+          { id: 'shakarat', text: 'شَكَرَتْ' },
+          { id: 'mishmish', text: 'المِشْمِشِ' },
+          { id: 'anis', text: 'أَنِيس' },
+          { id: 'shajara', text: 'شَجَرَةُ' },
+        ],
+        answers: [['shakarat', 'shajara', 'mishmish', 'anis', 'shadia']],
+      },
+    ],
     // Fixed worksheet order for both the sentences and the cloud: the one game that is not shuffled.
     fillBlank: {
       words: [
