@@ -183,7 +183,9 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
   // The story line takes height from a screen that already just fits, so the sizes below scale from a
   // visible height that many px shorter and the cards give it back.
   const room = unit.story ? STORY_ROOM : 0;
-  const v = (min: number, k: number, max: number) => vh(min, k, max, room);
+  // Five games take three rows on a tall narrow screen, so their largest sizes are a little smaller.
+  const cap = unit.games.length === 5 ? 0.7 : 1;
+  const v = (min: number, k: number, max: number) => vh(min, k, Math.max(min, Math.round(max * cap)), room);
   return (
     <main data-unit-screen={unit.id} className="min-h-app mx-auto flex max-w-[1160px] flex-col px-4 pb-4 pt-3 sm:px-6">
       <header className={cn('mb-4 flex shrink-0 items-center gap-[18px] rounded-card-lg px-4 py-2.5 shadow-card', theme.bg)}>

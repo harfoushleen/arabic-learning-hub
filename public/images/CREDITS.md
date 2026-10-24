@@ -47,7 +47,7 @@ All supplied by the teacher (classroom slides). The animated ones were converted
 | `unit-2/fustan.webp`, `unit-2/fustan-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
 | `unit-2/ananas.webp`, `unit-2/ananas-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
 | `unit-2/kass.webp`, `unit-2/kass-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
-| `unit-2/shamaa.png` (candle, letter-forms word شَمْعَة) | — | TBD | Supplied by the user; confirm source and license |
+| `unit-2/shamaa.webp`, `unit-2/shamaa-still.webp` (candle, letter-forms word شَمْعَة, converted from a GIF) | https://dribbble.com/shots/12107711-Cute-Candle | Designer on Dribbble (name not retrieved) | Supplied by the user; Dribbble shots are the designer's copyright, so confirm permission to use |
 | `unit-2/shajara.png` (apple tree, letter-forms word شَجَرَة) | — | TBD | Supplied by the user; confirm source and license |
 | `unit-2/minshafa.png` (towel, letter-forms word مِنْشَفَة) | — | TBD | Supplied by the user; confirm source and license |
 | `unit-2/jaysh.png` (soldier, letter-forms word جَيْش) | — | TBD | Supplied by the user; confirm source and license |

@@ -438,7 +438,7 @@ export const units: Unit[] = [
           letterFormItem('qirsh', 'قِرْش', 'ش', '🦈'),
           { ...letterFormItem('jaysh', 'جَيْش', 'ش', '💂'), image: '/images/unit-2/jaysh.png' },
           { ...letterFormItem('shajara', 'شَجَرَة', 'ش', '🌳'), image: '/images/unit-2/shajara.png' },
-          { ...letterFormItem('shamaa', 'شَمْعَة', 'ش', '🕯️'), image: '/images/unit-2/shamaa.png' },
+          { ...letterFormItem('shamaa', 'شَمْعَة', 'ش', '🕯️'), art: webpArt('shamaa') },
         ],
       },
     ],
