@@ -41,9 +41,14 @@ All supplied by the teacher (classroom slides). The animated ones were converted
 | `unit-2/shahina.jpg` | — | TBD | Supplied by the teacher (classroom slides) |
 | `unit-2/shawka.png` | — | TBD | Supplied by the teacher (classroom slides) |
 
+| `unit-2/lisan.webp`, `unit-2/lisan-still.webp` (still = last frame) | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/shams.webp`, `unit-2/shams-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/fustan.webp`, `unit-2/fustan-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/ananas.webp`, `unit-2/ananas-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/kass.webp`, `unit-2/kass-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
 | `unit-2/minshafa.svg` (towel, letter-forms word مِنْشَفَة) | — | Drawn for this project | Original artwork for this project (Noto has no towel emoji) |
 
-Words without a file yet (minshar, shams, lisan) show their Noto emoji. The letter-forms words سَمَكَة and جَلَسَ reuse the word game's `samak` and `kursi` pictures.
+Words without a file yet (minshar in the word game; mistara, khashab, farasha, qirsh, jaysh, shajara, shamaa in letter-forms) show their Noto emoji. The letter-forms words سَمَكَة and جَلَسَ reuse the word game's `samak` and `kursi` pictures.
 
 ## Emoji art (`public/emoji/`)
 
