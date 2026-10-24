@@ -392,7 +392,13 @@ export const units: Unit[] = [
       },
     ],
     vocab: unit2Vocab,
-    sentencePictures: [], // TODO: sentences + pictures coming
+    // The story, one sentence per scene, in story order.
+    sentencePictures: [
+      { id: 'sp-1', sentence: 'سَارَ أَنِيس وَشَادْيَا إِلَى البُسْتَانِ.', image: '/images/unit-2/scene-1.jpg' },
+      { id: 'sp-2', sentence: 'خَسِرَتْ شَجَرَةُ المِشْمِشِ أَوْرَاقَهَا.', image: '/images/unit-2/scene-2.jpg' },
+      { id: 'sp-3', sentence: 'دَهَنَ أَنِيس وَشَادْيَا شَجَرَةَ المِشْمِشِ بِلَوْنٍ أَخْضَرَ.', image: '/images/unit-2/scene-3.jpg' },
+      { id: 'sp-4', sentence: 'شَكَرَتْ شَجَرَةُ المِشْمِشِ أَنِيس وَشَادْيَا.', image: '/images/unit-2/scene-4.png' },
+    ],
     letterForms: [
       // TODO(teacher): confirm فَرَاشَة (butterfly), and جَيْش vs حَشِيش
       {
@@ -419,9 +425,9 @@ export const units: Unit[] = [
           { ...letterFormItem('minshafa', 'مِنْشَفَة', 'ش', '🛁'), image: '/images/unit-2/minshafa.svg' }, // no towel emoji exists
           letterFormItem('farasha', 'فَرَاشَة', 'ش', '🦋'),
           letterFormItem('qirsh', 'قِرْش', 'ش', '🦈'),
-          letterFormItem('jaysh', 'جَيْش', 'ش', '💂'),
-          letterFormItem('shajara', 'شَجَرَة', 'ش', '🌳'),
-          letterFormItem('shamaa', 'شَمْعَة', 'ش', '🕯️'),
+          letterFormItem('jaysh', 'جَيْش', 'ش', '🫡'), // Noto's animated saluting face
+          { ...letterFormItem('shajara', 'شَجَرَة', 'ش', '🌳'), image: '/images/unit-2/shajara.png' },
+          { ...letterFormItem('shamaa', 'شَمْعَة', 'ش', '🕯️'), art: webpArt('shamaa') },
         ],
       },
     ],

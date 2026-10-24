@@ -86,6 +86,14 @@ const saw = (page: Page, flag: string, id: string) =>
   page.evaluate((key) => (window as unknown as { __flags: Set<string> }).__flags.has(key), `${flag}:${id}`);
 const expectSaw = (page: Page, flag: string, id: string) => expect.poll(() => saw(page, flag, id)).toBe(true);
 
+const SENTENCE_PICTURES = UNIT.sentencePictures;
+
+async function openSentencePicture(page: Page) {
+  await page.goto('/#/unit/unit-2/sentence-picture');
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator('[data-row]')).toHaveCount(SENTENCE_PICTURES.length);
+}
+
 async function openFill(page: Page) {
   await page.goto('/#/unit/unit-2/fill-blank');
   await page.evaluate(() => document.fonts.ready);
@@ -148,7 +156,7 @@ async function expectContained(page: Page, state: string) {
 test.describe('unit 2 shell @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
-  test('home shows 2 unit cards; Unit 2 shows its story and 4 game cards, sentence-picture "coming soon"', async ({ page }) => {
+  test('home shows 2 unit cards; Unit 2 shows its story and its 4 playable game cards', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('[data-unit-card]')).toHaveCount(2);
     await page.locator('[data-unit-card="unit-2"]').click();
@@ -158,15 +166,8 @@ test.describe('unit 2 shell @chromium', () => {
     const ids = await page.locator('[data-game-card]').evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.gameCard));
     expect(ids).toEqual(['word-picture', 'sentence-picture', 'letter-forms', 'fill-blank']);
 
-    // Only sentence-picture has no content yet: a soft, disabled "قَرِيبًا" card.
-    const soon = page.locator('[data-game-card="sentence-picture"]');
-    await expect(soon).toHaveAttribute('data-soon', 'true');
-    await expect(soon).toBeDisabled();
-    await expect(soon).toContainText('قَرِيبًا');
-    await soon.click({ force: true });
-    await expect(page).toHaveURL(/#\/unit\/unit-2$/);
-    await expect(page.locator('#active-game-container')).toHaveCount(0);
-    for (const id of ['word-picture', 'letter-forms', 'fill-blank']) {
+    // Every game has content now: none is a "coming soon" card.
+    for (const id of ids) {
       await expect(page.locator(`[data-game-card="${id}"]`)).toHaveAttribute('data-soon', 'false');
       await expect(page.locator(`[data-game-card="${id}"]`)).toBeEnabled();
     }
@@ -178,8 +179,8 @@ test.describe('unit 2 shell @chromium', () => {
     await expect(preview).toContainText('إِلَى البُسْتَان');
   });
 
-  test('a deep link to the "coming soon" game goes home, like an unknown game', async ({ page }) => {
-    await page.goto('/#/unit/unit-2/sentence-picture');
+  test('a deep link to an unknown game goes home', async ({ page }) => {
+    await page.goto('/#/unit/unit-2/no-such-game');
     await expect(page).toHaveURL(/#\/$/);
     await expect(page.locator('[data-unit-card]')).toHaveCount(2);
   });
@@ -231,6 +232,22 @@ for (const vp of VIEWPORTS.filter((v) => v.kind !== 'phone')) {
       await expectFits(page, 'all filled', false); // the green sentences, just before the final screen
       await expect(restartButton(page)).toBeVisible();
       await at('final screen');
+    });
+
+    test('sentence-picture fits without scrolling, before and after matching', async ({ page }) => {
+      await openSentencePicture(page);
+      await page.waitForTimeout(300);
+      await expectFits(page, 'start', false);
+      const [first, ...rest] = SENTENCE_PICTURES;
+      await drag(page, page.locator(`[data-sentence="${first!.id}"]`), page.locator(`[data-picture="${first!.id}"]`), () => expectFits(page, 'mid-drag', false));
+      await expect(page.locator(`[data-picture="${first!.id}"]`)).toHaveAttribute('data-matched', 'true');
+      await page.waitForTimeout(700);
+      await expectFits(page, 'one matched', false);
+      for (const item of rest) {
+        await drag(page, page.locator(`[data-sentence="${item.id}"]`), page.locator(`[data-picture="${item.id}"]`));
+      }
+      await expect(restartButton(page)).toBeVisible();
+      await expectFits(page, 'final screen', false);
     });
 
     test('the Unit 2 screen fits without scrolling', async ({ page }) => {
@@ -335,6 +352,37 @@ for (const [label, browser, viewport, touch] of [
 function shownFor(key: string, wordId: string) {
   return BLANKS.find((b) => b.key === key)!.part.fill ?? WORD_TEXT.get(wordId)!;
 }
+
+test.describe('unit 2 sentence-picture @chromium', () => {
+  test.use({ viewport: { width: 1280, height: 620 } });
+
+  test('the 4 story sentences and scenes match by drag; a wrong pair is refused; rows never line up', async ({ page }) => {
+    // Open it from the unit screen, like a child would.
+    await page.goto('/#/unit/unit-2');
+    await page.locator('[data-game-card="sentence-picture"]').click();
+    await expect(page.locator('[data-row]')).toHaveCount(SENTENCE_PICTURES.length);
+
+    const rows = await page.locator('[data-row]').evaluateAll((els) =>
+      els.map((el) => [(el as HTMLElement).dataset.rowSentence, (el as HTMLElement).dataset.rowPicture]),
+    );
+    expect(rows.every(([s, p]) => s !== p), 'a row holds a matching pair').toBe(true);
+    expect(rows.map(([s]) => s).sort()).toEqual(SENTENCE_PICTURES.map((s) => s.id));
+    const shown = await page.locator('[data-sentence]').evaluateAll((els) => els.map((el) => el.textContent));
+    expect(shown.map((t) => t!.normalize('NFC')).sort()).toEqual(SENTENCE_PICTURES.map((s) => s.sentence.normalize('NFC')).sort());
+
+    // A wrong pair is refused: no line, nothing matched.
+    const [a, b] = SENTENCE_PICTURES;
+    await drag(page, page.locator(`[data-sentence="${a!.id}"]`), page.locator(`[data-picture="${b!.id}"]`));
+    await expect(page.locator('[data-line]')).toHaveCount(0);
+    await expect(page.locator(`[data-picture="${b!.id}"]`)).toHaveAttribute('data-shake', 'false'); // done shaking
+
+    for (const item of SENTENCE_PICTURES) {
+      await drag(page, page.locator(`[data-picture="${item.id}"]`), page.locator(`[data-sentence="${item.id}"]`)); // pictures drag too
+    }
+    await expect(restartButton(page)).toBeVisible();
+    await expect(page.getByRole('img', { name: '2 / 3' })).toBeVisible(); // one of 4 wrong on the first try
+  });
+});
 
 test.describe('fill-blank rules @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });

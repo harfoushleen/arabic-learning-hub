@@ -95,12 +95,13 @@ describe('units data', () => {
     expect(missing).toEqual([]);
   });
 
-  it('Unit 2: the story, the four games, and "coming soon" for the one without content', () => {
+  it('Unit 2: the story, the four games, all with content', () => {
     const unit = getUnit('unit-2')!;
     expect(unit.story).toBe('فِي البُسْتَانِ');
     expect(unit.letters).toEqual(['س', 'ش']);
     expect(unit.games.map((g) => g.id)).toEqual(['word-picture', 'sentence-picture', 'letter-forms', 'fill-blank']);
-    expect(unit.games.filter((g) => !gameHasContent(unit, g.id)).map((g) => g.id)).toEqual(['sentence-picture']);
+    expect(unit.games.filter((g) => !gameHasContent(unit, g.id))).toEqual([]);
+    expect(unit.sentencePictures.map((s) => s.id)).toEqual(['sp-1', 'sp-2', 'sp-3', 'sp-4']);
     expect(unit.vocab).toHaveLength(23);
     expect(unit.letterForms.map((s) => [s.id, s.letter, s.items.length])).toEqual([
       ['seen', 'س', 6],

@@ -5,6 +5,7 @@ Every image in `public/images/` must be cartoon/illustrated, from a licensed sou
 | File | Source URL | Author | License |
 | --- | --- | --- | --- |
 | `game-2/image-1.png`, `game-2/image-2.jpg`, `game-2/image-3.jpg` | — | Publisher/author: TBD | Unit 1 sentence–picture worksheet illustrations from the class textbook, supplied by the teacher for classroom use. |
+| `unit-2/scene-1.jpg`, `unit-2/scene-2.jpg`, `unit-2/scene-3.jpg`, `unit-2/scene-4.png` | — | Publisher/author: TBD | Unit 2 sentence–picture scenes (فِي البُسْتَانِ) from the class textbook, supplied by the teacher for classroom use. |
 
 ## Vocabulary images
 
@@ -46,9 +47,11 @@ All supplied by the teacher (classroom slides). The animated ones were converted
 | `unit-2/fustan.webp`, `unit-2/fustan-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
 | `unit-2/ananas.webp`, `unit-2/ananas-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
 | `unit-2/kass.webp`, `unit-2/kass-still.webp` | — | TBD | Supplied by the teacher (classroom slides) |
+| `unit-2/shamaa.webp`, `unit-2/shamaa-still.webp` (candle, converted from a GIF) | https://commons.wikimedia.org/wiki/File:Jeeny_candle.gif | Jeeny | Public domain (Wikimedia Commons) |
+| `unit-2/shajara.png` (apple tree, letter-forms word شَجَرَة) | — | TBD | Supplied by the user; confirm source and license |
 | `unit-2/minshafa.svg` (towel, letter-forms word مِنْشَفَة) | — | Drawn for this project | Original artwork for this project (Noto has no towel emoji) |
 
-Words without a file yet (minshar in the word game; mistara, khashab, farasha, qirsh, jaysh, shajara, shamaa in letter-forms) show their Noto emoji. The letter-forms word جَلَسَ reuses the word game's `kursi` picture; سَمَكَة keeps its 🐟 emoji.
+Words without a file yet (minshar in the word game; mistara, khashab, farasha, qirsh in letter-forms) show their Noto emoji. جَيْش shows Noto's animated saluting face (covered by the emoji credit below). The letter-forms word جَلَسَ reuses the word game's `kursi` picture; سَمَكَة keeps its 🐟 emoji.
 
 ## Emoji art (`public/emoji/`)
 
