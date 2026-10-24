@@ -6,8 +6,7 @@ import { useTimers } from '@/hooks/useTimers';
 import { starsFor } from '@/lib/rounds';
 import { textWidth } from '@/lib/textWidth';
 import { THEME } from '@/lib/theme';
-import { cn, prefersReducedMotion } from '@/lib/utils';
-import { BigButton } from './BigButton';
+import { cn } from '@/lib/utils';
 import { DraggableTile } from './drag/DraggableTile';
 import { useDrag, type DropResult } from './drag/useDrag';
 import { GameFinal } from './GameFinal';
@@ -17,13 +16,10 @@ import type { GameProps } from './types';
 type BlankPart = Extract<FillBlankPart, { type: 'blank' }>;
 
 const SHAKE_MS = 500;
-const FLY_MS = 350;
 const WIGGLE_MS = 450;
 const POP_MS = 600;
 const HINT_MS = 1300;
 const FINISH_HOLD_MS = 1200;
-
-const CLOUD_TARGET = 'cloud';
 
 const GAP = 12; // between story, sentences and cloud
 const ROW_GAP = 8; // between sentence cards
@@ -42,7 +38,7 @@ const LINE = 1.8; // text-vowelled line-height
 const CLOUD_PAD_X = 28;
 const CLOUD_PAD_Y = 12;
 const PUFF = 26; // the cloud's bumps stand this far above its body
-const BUTTON_H = 64; // BigButton min height
+const MIN_BODY_H = 64; // the cloud is never shorter than this
 
 const rowCount = (widths: number[], max: number): number => {
   let rows = 1;
@@ -87,7 +83,7 @@ interface Metrics {
 
 const blankKey = (sentence: FillBlankSentence, index: number) => `${sentence.id}:${index}`;
 
-/** What a blank shows once locked: its own `fill`, else the word it holds. */
+/** What a blank shows once filled: its own `fill`, else the word it holds. */
 const fillText = (part: BlankPart, wordText: string) => part.fill ?? wordText;
 
 /** Any word can be dropped on any blank, so every blank is as wide as the widest word (or fill). */
@@ -147,7 +143,7 @@ function metrics(content: Content, font: number, areaWidth: number): Metrics {
   const chipW: Record<string, number> = {};
   for (const w of content.words) chipW[w.id] = Math.max(56, Math.ceil(textWidth(w.text, chipFont) * 1.04) + 2 * (padX + BORDER));
   const rows = rowCount(Object.values(chipW), contentWidth - 2 * CLOUD_PAD_X);
-  const bodyH = Math.max(rows * chipH + (rows - 1) * PIECE_GAP, BUTTON_H) + 2 * CLOUD_PAD_Y;
+  const bodyH = Math.max(rows * chipH + (rows - 1) * PIECE_GAP, MIN_BODY_H) + 2 * CLOUD_PAD_Y;
   return { font, chipFont, chipH, chipW, blankW, contentWidth, sentencesH, cloudH: PUFF + bodyH };
 }
 
@@ -179,7 +175,7 @@ export default function FillBlankGame({ unitId, onExit }: GameProps) {
   );
 }
 
-type Phase = 'playing' | 'checking' | 'finished';
+type Phase = 'playing' | 'holding' | 'finished';
 
 interface SessionProps {
   data: { words: FillBlankWord[]; sentences: FillBlankSentence[] };
@@ -204,23 +200,18 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
   const wordText = (id: string) => data.words.find((w) => w.id === id)!.text;
 
   const [phase, setPhase] = useState<Phase>('playing');
-  const [placed, setPlaced] = useState<Readonly<Record<string, string>>>({}); // blank key → word id
-  const [locked, setLocked] = useState<ReadonlySet<string>>(() => new Set()); // blank keys that were right
-  const [misses, setMisses] = useState<Readonly<Record<string, number>>>({}); // blank key → wrong checks
-  const [firstCorrect, setFirstCorrect] = useState<number | null>(null);
-  const [shaking, setShaking] = useState<ReadonlySet<string>>(() => new Set()); // word ids
-  const [flying, setFlying] = useState<Readonly<Record<string, { dx: number; dy: number }>>>({});
+  const [filled, setFilled] = useState<Readonly<Record<string, string>>>({}); // blank key → word id (always a right one)
+  const [misses, setMisses] = useState<Readonly<Record<string, number>>>({}); // blank key → wrong drops
+  const [shakeChip, setShakeChip] = useState<string | null>(null);
   const [wiggleChip, setWiggleChip] = useState<string | null>(null);
-  const [hintChips, setHintChips] = useState<ReadonlySet<string>>(() => new Set()); // word ids
-  const [popped, setPopped] = useState<ReadonlySet<string>>(() => new Set()); // blank keys
+  const [hintChip, setHintChip] = useState<string | null>(null);
+  const [popped, setPopped] = useState<string | null>(null); // blank key
   const later = useTimers();
   useFontsReady(); // re-measure text once Naskh is loaded
 
   const total = content.blanks.length;
-  const blankOf = new Map(Object.entries(placed).map(([key, id]) => [id, key])); // word id → blank key
-  const lockedWords = new Set([...locked].map((key) => placed[key]!));
-  const allFilled = content.blanks.every((b) => placed[b.key] !== undefined);
-  const showCheck = phase === 'playing' && allFilled;
+  const used = new Set(Object.values(filled));
+  const filledCount = Object.keys(filled).length;
 
   // Measuring text is the costly part and every drag move re-renders, so each size is worked out once per render.
   const measured = new Map<string, Metrics>();
@@ -261,9 +252,8 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
     }
   }
 
-  // Drop targets: every blank that is not locked yet, and the cloud (to take a placed chip back).
+  // Drop targets: every blank. An empty one takes the right word; a filled one rejects whatever comes.
   const [targetEls] = useState(() => new Map<string, HTMLElement>());
-  const [slotEls] = useState(() => new Map<string, HTMLElement>());
   const setTarget = (key: string) => (el: HTMLElement | null) => {
     if (el) targetEls.set(key, el);
     else targetEls.delete(key);
@@ -271,104 +261,58 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
   const { drag, overId, bind } = useDrag<string, string>({
     getTargets: () => [...targetEls].map(([id, el]) => ({ id, rect: el.getBoundingClientRect() })),
     margin: 12,
-    canDrag: (id) => phase === 'playing' && !lockedWords.has(id),
+    canDrag: (id) => phase === 'playing' && !shakeChip && !used.has(id),
     onDrop: dropChip,
     onTap: (id) => {
       // Words are only placed by dragging; a tap wiggles to say "drag me".
       setWiggleChip(id);
       later(() => setWiggleChip((cur) => (cur === id ? null : cur)), WIGGLE_MS);
     },
+    onReturned: (id, reason) => {
+      if (reason !== 'wrong') return;
+      setShakeChip(id);
+      later(() => setShakeChip(null), SHAKE_MS);
+    },
   });
 
-  /** No judgment here: an empty blank takes the chip, a filled one swaps, the cloud takes it back. */
+  /** A right word snaps in and stays; a wrong one is rejected on the spot (it glides back and shakes). */
   function dropChip(wordId: string, target: string): DropResult {
-    const from = blankOf.get(wordId);
-    if (target === from) return 'wrong'; // dropped on its own blank: it glides home
-    const next = { ...placed };
-    if (target === CLOUD_TARGET) {
-      if (from === undefined) return 'wrong';
-      delete next[from];
-    } else {
-      const occupant = placed[target];
-      next[target] = wordId;
-      if (from !== undefined) {
-        if (occupant !== undefined) next[from] = occupant; // swap with the blank it came from
-        else delete next[from];
-      } // else the occupant (if any) returns to the cloud
-      setPopped((p) => new Set(p).add(target));
-      later(() => setPopped((p) => new Set([...p].filter((k) => k !== target))), POP_MS);
-    }
-    setPlaced(next);
-    setHintChips(new Set());
-    return 'correct';
-  }
+    const blank = content.blanks.find((b) => b.key === target);
+    if (!blank || filled[target] !== undefined) return 'wrong'; // a filled blank takes nothing more
 
-  function check() {
-    if (!showCheck) return;
-    setPhase('checking');
-    const right = content.blanks.filter((b) => b.part.accept.includes(placed[b.key]!) && !locked.has(b.key));
-    const wrong = content.blanks.filter((b) => !b.part.accept.includes(placed[b.key]!) && !locked.has(b.key));
-    if (firstCorrect === null) setFirstCorrect(right.length);
-
-    const nextLocked = new Set([...locked, ...right.map((b) => b.key)]);
-    setLocked(nextLocked);
-    setPopped(new Set(right.map((b) => b.key)));
-    later(() => setPopped(new Set()), POP_MS);
-
-    if (wrong.length === 0) {
-      later(() => setPhase('finished'), FINISH_HOLD_MS);
-      return;
-    }
-
-    const nextMisses = { ...misses };
-    for (const b of wrong) nextMisses[b.key] = (nextMisses[b.key] ?? 0) + 1;
-    setMisses(nextMisses);
-
-    const wrongWords = wrong.map((b) => placed[b.key]!);
-    const reduced = prefersReducedMotion();
-    setShaking(new Set(wrongWords));
-    later(() => {
-      setShaking(new Set());
-      // Each wrong chip flies from its blank to its own slot in the cloud.
-      const flight: Record<string, { dx: number; dy: number }> = {};
-      for (const id of wrongWords) {
-        const from = document.querySelector(`[data-tile="${id}"]`)?.getBoundingClientRect();
-        const to = slotEls.get(id)?.getBoundingClientRect();
-        if (from && to) {
-          flight[id] = { dx: to.left + to.width / 2 - (from.left + from.width / 2), dy: to.top + to.height / 2 - (from.top + from.height / 2) };
-        }
+    if (blank.part.accept.includes(wordId) && !used.has(wordId)) {
+      const next = { ...filled, [target]: wordId };
+      setFilled(next);
+      setHintChip(null);
+      setPopped(target);
+      later(() => setPopped((cur) => (cur === target ? null : cur)), POP_MS);
+      if (content.blanks.every((b) => next[b.key] !== undefined)) {
+        setPhase('holding');
+        later(() => setPhase('finished'), FINISH_HOLD_MS);
       }
-      if (!reduced) setFlying(flight);
-      later(() => {
-        setPlaced((p) => Object.fromEntries(Object.entries(p).filter(([key]) => !wrong.some((b) => b.key === key))));
-        setFlying({});
-        setPhase('playing');
-        // A blank that is wrong for the second time pulses a chip that fits it.
-        const taken = new Set([...nextLocked].map((key) => placed[key]!));
-        const hints = new Set<string>();
-        for (const b of wrong) {
-          const id = nextMisses[b.key] === 2 ? b.part.accept.find((a) => !taken.has(a)) : undefined;
-          if (id) {
-            taken.add(id);
-            hints.add(id);
-          }
-        }
-        if (hints.size > 0) {
-          setHintChips(hints);
-          later(() => setHintChips((cur) => (cur === hints ? new Set() : cur)), HINT_MS);
-        }
-      }, reduced ? 0 : FLY_MS);
-    }, reduced ? 0 : SHAKE_MS);
+      return 'correct';
+    }
+
+    // The second miss on a blank pulses a chip that fits it.
+    const count = (misses[target] ?? 0) + 1;
+    setMisses({ ...misses, [target]: count });
+    if (count === 2) {
+      const right = blank.part.accept.find((id) => !used.has(id));
+      if (right) {
+        setHintChip(right);
+        later(() => setHintChip((cur) => (cur === right ? null : cur)), HINT_MS);
+      }
+    }
+    return 'wrong';
   }
 
   const finished = phase === 'finished';
-  let overlay = null;
-  if (finished) {
-    overlay = <GameFinal stars={starsFor(firstCorrect ?? 0, total)} confetti="always" onRestart={onRestart} onExit={onExit} />;
-  }
+  const overlay = finished ? (
+    <GameFinal stars={starsFor(total - Object.keys(misses).length, total)} confetti="always" onRestart={onRestart} onExit={onExit} />
+  ) : null;
 
-  /** A chip you can drag: in the cloud at its slot, or sitting in a blank. */
-  const chip = (id: string, size: { width: number | string; height: number | string; fontSize: number }, extra?: string) => (
+  /** A word chip in the cloud. */
+  const chip = (id: string, size: { fontSize: number }) => (
     <DraggableTile
       key={id}
       id={id}
@@ -376,21 +320,16 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
       bind={bind}
       data={{
         'data-tile': id,
-        'data-hint': hintChips.has(id),
+        'data-hint': hintChip === id,
         'data-wiggle': wiggleChip === id,
-        'data-shake': shaking.has(id),
+        'data-shake': shakeChip === id,
       }}
-      style={{
-        ...size,
-        ...(flying[id] && { transform: `translate(${flying[id].dx}px, ${flying[id].dy}px)`, transition: `transform ${FLY_MS}ms ease-in-out` }),
-      }}
+      style={{ width: '100%', height: '100%', ...size }}
       className={cn(
         'flex cursor-grab items-center justify-center whitespace-nowrap rounded-2xl border-[3px] border-white bg-white text-vowelled shadow-md',
-        shaking.has(id) && 'animate-shake',
-        hintChips.has(id) && 'animate-hint',
+        shakeChip === id && 'animate-shake',
+        hintChip === id && 'animate-hint',
         wiggleChip === id && 'animate-wiggle',
-        flying[id] && 'relative z-30',
-        extra,
       )}
     >
       {wordText(id)}
@@ -401,7 +340,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
     <GameStage
       title={title}
       instruction={instruction}
-      progress={{ total, current: finished ? total : locked.size }}
+      progress={{ total, current: finished ? total : filledCount }}
       onClose={onExit}
       playAreaRef={fit.ref}
       scrollable={!finished && layout !== null && !layout.fits}
@@ -420,10 +359,10 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
             </p>
           )}
 
-          {/* All the sentences at once, numbered. Dashed boxes are drop targets; a chip sits in its blank until checked. */}
+          {/* All the sentences at once, numbered. Dashed boxes are drop targets; a right word stays in its blank. */}
           <div className="flex shrink-0 flex-col" style={{ width: m.contentWidth, gap: ROW_GAP }}>
             {data.sentences.map((sentence, n) => {
-              const complete = content.blanks.filter((b) => b.key.startsWith(`${sentence.id}:`)).every((b) => locked.has(b.key));
+              const complete = content.blanks.filter((b) => b.key.startsWith(`${sentence.id}:`)).every((b) => filled[b.key] !== undefined);
               return (
                 <div
                   key={sentence.id}
@@ -460,22 +399,23 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
                         marginInlineEnd: attachedAfter ? 0 : 4,
                       };
                       const key = blankKey(sentence, i);
-                      const wordId = placed[key];
+                      const wordId = filled[key];
 
-                      if (locked.has(key)) {
+                      if (wordId !== undefined) {
                         return (
                           <span
                             key={i}
+                            ref={setTarget(key)}
                             data-blank={key}
-                            data-state="locked"
+                            data-state="filled"
                             data-filled-word={wordId}
                             className={cn(
                               'inline-flex items-center justify-center whitespace-nowrap rounded-2xl bg-emerald-100 align-middle text-emerald-900',
-                              popped.has(key) && 'animate-pop',
+                              popped === key && 'animate-pop',
                             )}
                             style={box}
                           >
-                            {fillText(part, wordText(wordId!))}
+                            {fillText(part, wordText(wordId))}
                           </span>
                         );
                       }
@@ -485,20 +425,15 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
                           key={i}
                           ref={setTarget(key)}
                           data-blank={key}
-                          data-state={wordId === undefined ? 'empty' : 'filled'}
-                          data-filled-word={wordId}
+                          data-state="empty"
                           data-over={over}
-                          aria-label={wordId === undefined ? 'فَرَاغ' : undefined}
+                          aria-label="فَرَاغ"
                           className={cn(
-                            'inline-block rounded-2xl align-middle transition-colors',
-                            wordId === undefined && 'border-[3px] border-dashed',
-                            over ? 'scale-105 border-emerald-400 bg-emerald-50' : wordId === undefined && 'border-amber-400 bg-amber-50',
-                            popped.has(key) && 'animate-pop',
+                            'inline-block rounded-2xl border-[3px] border-dashed align-middle transition-colors',
+                            over ? 'scale-105 border-emerald-400 bg-emerald-50' : 'border-amber-400 bg-amber-50',
                           )}
                           style={box}
-                        >
-                          {wordId !== undefined && chip(wordId, { width: '100%', height: '100%', fontSize: m.font })}
-                        </span>
+                        />
                       );
                     })}
                   </div>
@@ -511,38 +446,21 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
           <div data-cloud className="relative shrink-0" style={{ width: m.contentWidth, height: m.cloudH }}>
             <Puffs theme={cloudTheme} />
             <div
-              ref={setTarget(CLOUD_TARGET)}
-              data-over={overId === CLOUD_TARGET}
               className={cn(
-                'absolute inset-x-0 bottom-0 flex flex-wrap content-center items-center justify-center rounded-[44px] shadow-[inset_0_-6px_0_rgba(59,58,74,.06)] transition-shadow',
+                'absolute inset-x-0 bottom-0 flex flex-wrap content-center items-center justify-center rounded-[44px] shadow-[inset_0_-6px_0_rgba(59,58,74,.06)]',
                 THEME[cloudTheme].bg,
-                overId === CLOUD_TARGET && 'ring-4 ring-emerald-300',
               )}
               style={{ top: PUFF, padding: `${CLOUD_PAD_Y}px ${CLOUD_PAD_X}px`, gap: PIECE_GAP }}
             >
               {data.words.map((word) => (
-                <div
-                  key={word.id}
-                  ref={(el) => {
-                    if (el) slotEls.set(word.id, el);
-                    else slotEls.delete(word.id);
-                  }}
-                  data-slot={word.id}
-                  className={cn(showCheck && 'invisible')}
-                  style={{ width: m.chipW[word.id], height: m.chipH }}
-                >
-                  {blankOf.has(word.id) ? (
+                <div key={word.id} data-slot={word.id} style={{ width: m.chipW[word.id], height: m.chipH }}>
+                  {used.has(word.id) ? (
                     <div aria-hidden className="h-full w-full rounded-2xl border-[3px] border-dashed border-white/70" />
                   ) : (
-                    chip(word.id, { width: '100%', height: '100%', fontSize: m.chipFont })
+                    chip(word.id, { fontSize: m.chipFont })
                   )}
                 </div>
               ))}
-              {showCheck && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <BigButton onClick={check}>تَحَقَّقْ</BigButton>
-                </div>
-              )}
             </div>
           </div>
         </div>
