@@ -70,7 +70,7 @@ const unit1Vocab: VocabWord[] = [
   { id: 'arza', text: 'أَرْزَة', emoji: '🌲' },
   { id: 'mawza', text: 'مَوْزَة', emoji: '🍌', art: { src: '/art/mawza.json', type: 'lottie' } },
   { id: 'zahra', text: 'زَهْرَة', emoji: '🌷', confusableWith: ['zara'] },
-  { id: 'darz', text: 'دَرْز', emoji: '🪡', art: { src: '/art/darz.webp', type: 'webp', still: '/art/darz-still.webp' } },
+  { id: 'darz', text: 'دَرَز', emoji: '🪡', art: { src: '/art/darz.webp', type: 'webp', still: '/art/darz-still.webp' } },
   { id: 'kalb', text: 'كَلْب', emoji: '🐕', confusableWith: ['barud'] },
   // Barud is the dog's name.
   { id: 'barud', text: 'بَارُود', emoji: '🐩', confusableWith: ['kalb'] },
