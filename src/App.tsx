@@ -1,15 +1,18 @@
 import { Suspense, useEffect, useState, type CSSProperties } from 'react';
 import { EmojiArt } from '@/components/EmojiArt';
+import { FillBlankPreview } from '@/components/FillBlankPreview';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { GameStage } from '@/components/games/GameStage';
 import { gameRegistry } from '@/components/games/registry';
-import { getUnit, units, type GameId, type Unit } from '@/data/units';
+import { gameHasContent, getUnit, units, type GameId, type Unit } from '@/data/units';
 import { useHashRoute } from '@/lib/router';
 import { THEME } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 /** A length that scales with the visible height (so the unit screen fits short laptop screens). */
-const vh = (min: number, k: number, max: number) => `clamp(${min}px, calc(var(--app-h, 100dvh) * ${k}), ${max}px)`;
+const vh = (min: number, k: number, max: number, room = 0) =>
+  `clamp(${min}px, calc(${room ? `(var(--app-h, 100dvh) - ${room}px)` : 'var(--app-h, 100dvh)'} * ${k}), ${max}px)`;
+const STORY_ROOM = 28;
 
 /** Card press effect: lift on hover (mouse only), push down with a smaller shadow, keyboard focus ring. */
 const PRESSABLE = cn(
@@ -170,6 +173,10 @@ function Credits() {
 
 function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; onPlay: (id: GameId) => void }) {
   const theme = THEME[unit.theme];
+  // The story line takes height from a screen that already just fits, so the sizes below scale from a
+  // visible height that many px shorter and the cards give it back.
+  const room = unit.story ? STORY_ROOM : 0;
+  const v = (min: number, k: number, max: number) => vh(min, k, max, room);
   return (
     <main data-unit-screen={unit.id} className="min-h-app mx-auto flex max-w-[1160px] flex-col px-4 pb-4 pt-3 sm:px-6">
       <header className={cn('mb-4 flex shrink-0 items-center gap-[18px] rounded-card-lg px-4 py-2.5 shadow-card', theme.bg)}>
@@ -183,9 +190,14 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
         </button>
         <div className="flex min-w-0 flex-1 flex-col items-start">
           <Badge unit={unit} />
-          <h1 className="text-vowelled" style={{ fontSize: vh(22, 0.04, 34) }}>
+          <h1 className="text-vowelled" style={{ fontSize: v(22, 0.04, 34) }}>
             {unit.title}
           </h1>
+          {unit.story && (
+            <p data-unit-story className={cn('text-vowelled opacity-80', theme.ink)} style={{ fontSize: v(15, 0.026, 20) }}>
+              {unit.story}
+            </p>
+          )}
         </div>
         <span className="hidden min-[560px]:block">
           <LetterTiles unit={unit} className="w-[72px] rounded-[18px] text-[46px]" />
@@ -199,34 +211,46 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
         {unit.games.map((game) => {
           // Each card is filled with its game's own color; the emoji circle and pill are white.
           const t = THEME[game.theme];
+          // A game with no content yet is a soft, unopenable "coming soon" card.
+          const soon = !gameHasContent(unit, game.id);
           return (
             <button
               key={game.id}
               type="button"
               data-game-card={game.id}
+              data-soon={soon}
+              disabled={soon}
               onClick={() => onPlay(game.id)}
-              className={cn(PRESSABLE, 'flex min-h-0 flex-col items-center justify-center rounded-card-lg border-4 border-white/60 px-[18px] text-center', t.bg)}
-              style={{ gap: vh(4, 0.012, 10), paddingBlock: vh(8, 0.025, 22) }}
+              className={cn(
+                soon ? 'game-piece cursor-default opacity-60' : PRESSABLE,
+                'flex min-h-0 flex-col items-center justify-center rounded-card-lg border-4 border-white/60 px-[18px] text-center',
+                t.bg,
+              )}
+              style={{ gap: v(4, 0.012, 10), paddingBlock: v(8, 0.025, 22) }}
             >
-              <span
-                aria-hidden
-                className="flex aspect-square shrink-0 items-center justify-center rounded-full bg-white/80"
-                style={{ width: vh(52, 0.09, 112) }}
-              >
-                {/* Plays once on load, then stays static. */}
-                <EmojiArt emoji={game.emoji} size={vh(30, 0.052, 64)} play />
-              </span>
-              <span className="text-vowelled" style={{ fontSize: vh(20, 0.036, 26) }}>
+              {game.id === 'fill-blank' && !soon ? (
+                <FillBlankPreview unit={unit} height={v(52, 0.09, 112)} />
+              ) : (
+                <span
+                  aria-hidden
+                  className="flex aspect-square shrink-0 items-center justify-center rounded-full bg-white/80"
+                  style={{ width: v(52, 0.09, 112) }}
+                >
+                  {/* Plays once on load, then stays static. */}
+                  <EmojiArt emoji={game.emoji} size={v(30, 0.052, 64)} play={!soon} />
+                </span>
+              )}
+              <span className="text-vowelled" style={{ fontSize: v(20, 0.036, 26) }}>
                 {game.title}
               </span>
-              <span className={cn('text-vowelled opacity-80', t.ink)} style={{ fontSize: vh(15, 0.026, 19), lineHeight: 1.8 }}>
+              <span className={cn('text-vowelled opacity-80', t.ink)} style={{ fontSize: v(15, 0.026, 19), lineHeight: 1.8 }}>
                 {game.short}
               </span>
               <span
                 className={cn('inline-flex items-center rounded-full bg-white px-[26px] text-vowelled', t.ink)}
-                style={{ minHeight: vh(40, 0.07, 52), fontSize: vh(18, 0.032, 22) }}
+                style={{ minHeight: v(40, 0.07, 52), fontSize: v(18, 0.032, 22) }}
               >
-                أَلْعَبُ ◀
+                {soon ? 'قَرِيبًا' : 'أَلْعَبُ ◀'}
               </span>
             </button>
           );

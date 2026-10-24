@@ -1,8 +1,20 @@
 {
+  "2600": {
+    "animated": false
+  },
+  "2709": {
+    "animated": false
+  },
   "1f332": {
     "animated": true
   },
+  "1f333": {
+    "animated": false
+  },
   "1f337": {
+    "animated": true
+  },
+  "1f33f": {
     "animated": true
   },
   "1f347": {
@@ -11,23 +23,53 @@
   "1f34c": {
     "animated": false
   },
+  "1f34d": {
+    "animated": true
+  },
   "1f352": {
+    "animated": true
+  },
+  "1f374": {
+    "animated": false
+  },
+  "1f3ad": {
     "animated": true
   },
   "1f3e0": {
     "animated": true
   },
+  "1f3eb": {
+    "animated": false
+  },
   "1f407": {
+    "animated": true
+  },
+  "1f40a": {
     "animated": true
   },
   "1f415": {
     "animated": true
   },
+  "1f41f": {
+    "animated": true
+  },
+  "1f422": {
+    "animated": true
+  },
   "1f429": {
     "animated": true
   },
+  "1f43f": {
+    "animated": false
+  },
+  "1f445": {
+    "animated": false
+  },
   "1f44b": {
     "animated": true
+  },
+  "1f457": {
+    "animated": false
   },
   "1f466": {
     "animated": false
@@ -36,6 +78,12 @@
     "animated": false
   },
   "1f468_200d_1f466": {
+    "animated": false
+  },
+  "1f482": {
+    "animated": false
+  },
+  "1f4cf": {
     "animated": false
   },
   "1f4d6": {
@@ -47,8 +95,17 @@
   "1f524": {
     "animated": false
   },
+  "1f56f": {
+    "animated": false
+  },
   "1f5bc": {
     "animated": false
+  },
+  "1f697": {
+    "animated": true
+  },
+  "1f69a": {
+    "animated": true
   },
   "1f6aa": {
     "animated": false
@@ -65,10 +122,28 @@
   "1f955": {
     "animated": true
   },
+  "1f95b": {
+    "animated": false
+  },
   "1f976": {
     "animated": true
   },
+  "1f985": {
+    "animated": true
+  },
+  "1f988": {
+    "animated": true
+  },
+  "1f98b": {
+    "animated": true
+  },
   "1f992": {
+    "animated": false
+  },
+  "1f99a": {
+    "animated": true
+  },
+  "1f9b7": {
     "animated": false
   },
   "1f9d1_200d_1f3eb": {
@@ -77,13 +152,40 @@
   "1f9d2": {
     "animated": false
   },
+  "1f9d9": {
+    "animated": false
+  },
   "1f9e9": {
     "animated": false
   },
   "1f9f8": {
     "animated": false
   },
+  "1f9fa": {
+    "animated": false
+  },
+  "1fa91": {
+    "animated": false
+  },
+  "1fa9a": {
+    "animated": false
+  },
+  "1fa9f": {
+    "animated": false
+  },
   "1faa1": {
+    "animated": false
+  },
+  "1faae": {
+    "animated": false
+  },
+  "1fab5": {
+    "animated": false
+  },
+  "1fab6": {
+    "animated": false
+  },
+  "270f": {
     "animated": false
   }
 }

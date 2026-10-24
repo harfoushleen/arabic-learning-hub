@@ -6,14 +6,15 @@ Arabic letter games for children aged 6–8. It is built for iPads in the classr
 
 ## The games
 
-Each unit (the first is حَرْفَا البَاءِ وَالزَّايِ, the letters ب and ز) has four games. All of them are played by dragging with a finger or a mouse:
+Each unit lists its own games, with its own wording for each. Unit 1 is حَرْفَا البَاءِ وَالزَّايِ (ب and ز) and Unit 2 is حَرْفَا السِّينِ وَالشِّينِ (س and ش, the story فِي البُسْتَانِ). A game that has no content yet shows as "قَرِيبًا" and can't be opened. All of the games are played by dragging with a finger or a mouse:
 
 | Game | What the child does |
 |---|---|
 | 🖼️ **رَبْطُ الكَلِمَةِ بِالصُّورَةِ** (word → picture) | Drags each word onto its picture. |
 | 📖 **رَبْطُ الجُمْلَةِ بِالرَّسْمِ** (sentence → scene) | Draws a line from each sentence to the scene it describes. |
-| 🔤 **أَشْكَالُ الحُرُوفِ** (letter forms) | Picks a letter (ب or ز), then drags the right form of it (بـ ـبـ ـب ب, or ز ـز) into the gap in each word. |
-| 🧩 **تَرْتِيبُ الكَلِمَاتِ** (unscramble) | Drags the words into the right order to build a sentence, with a scene picture as a hint. |
+| 🔤 **أَشْكَالُ الحُرُوفِ** (letter forms) | Picks a letter (ب or ز, س or ش), then drags the right form of it (بـ ـبـ ـب ب, or ز ـز) into the gap in each word. |
+| 🧩 **تَرْتِيبُ الكَلِمَاتِ** (unscramble, Unit 1) | Drags the words into the right order to build a sentence, with a scene picture as a hint. |
+| ✏️ **مَلْءُ الفَرَاغِ** (fill in the blank, Unit 2) | Drags words from a word cloud into the blanks of the story's sentences, one sentence at a time. |
 
 Every game gives visual feedback only:
 - A correct answer pops into place; a wrong one glides back and shakes.
@@ -53,6 +54,9 @@ All curriculum content lives in one file, **[`src/data/units.ts`](src/data/units
 
 - **New word:** give it an `emoji`, and optionally `art` (a Lottie JSON or WebP in `public/art/`) or an `image`. Then run `node scripts/fetch-emoji-assets.mjs` to download the Noto art for any new emoji.
 - **New letter in the letter-forms game:** add a set to `letterForms`. The letter chooser picks it up automatically, and its tiles (4 forms, or 2 for letters like ز that never join forward) are worked out for you.
+- **New letter-forms word:** write it with `letterFormItem(id, target, letter, emoji)` (in `src/lib/arabicJoining.ts`). It splits the vowelled word at the letter and works out each blank's fill and form, so there are no parts to write by hand.
+- **New unit:** add it to `units`, with its own `games` list. A game whose data is empty (for example `sentencePictures: []`) shows as "قَرِيبًا". An optional `story` shows under the unit title.
+- **Fill-blank:** a `fillBlank` with `words` (the word cloud) and `sentences`. Each blank lists the cloud words it `accept`s; two blanks that accept the same two words are filled in either order.
 - `npm test` checks the data: every word's parts rebuild the target word, every answer matches its joining context, and every picture file exists.
 
 ## Tech

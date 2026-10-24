@@ -7,6 +7,7 @@ import {
   formName,
   formsFor,
   joinedSegments,
+  letterFormItem,
   stripTashkeel,
   worksheetSegments,
 } from './arabicJoining';
@@ -63,6 +64,58 @@ describe('letterForms data', () => {
       expect(index).toBe(bases.length);
     },
   );
+});
+
+describe('letterFormItem', () => {
+  it('rebuilds every hand-written Unit 1 word exactly', () => {
+    for (const set of units[0]!.letterForms) {
+      for (const item of set.items) {
+        const built = letterFormItem(item.id, item.target, set.letter, item.emoji);
+        expect(built.parts, item.id).toEqual(item.parts);
+      }
+    }
+  });
+
+  it('splits at every occurrence of the letter, each with its own tashkeel and context', () => {
+    expect(letterFormItem('x', 'دَبْدُوب', 'ب', '🧸').parts).toEqual([
+      { type: 'text', value: 'دَ' },
+      { type: 'blank', answer: 'بـ', fill: 'بْ' },
+      { type: 'text', value: 'دُو' },
+      { type: 'blank', answer: 'ب', fill: 'ب' },
+    ]);
+  });
+
+  it('throws when the word does not contain the letter', () => {
+    expect(() => letterFormItem('x', 'بَيْت', 'س', '🏠')).toThrow();
+  });
+
+  // The Unit 2 table (word, picture, expected form of the letter in it).
+  const UNIT_2: Record<string, [target: string, emoji: string, answer: string][]> = {
+    seen: [
+      ['فُسْتَان', '👗', 'ـسـ'],
+      ['سَمَكَة', '🐟', 'سـ'],
+      ['كَأْس', '🥛', 'س'],
+      ['أَنَانَاس', '🍍', 'س'],
+      ['جَلَسَ', '🪑', 'ـس'],
+      ['مِسْطَرَة', '📏', 'ـسـ'],
+    ],
+    sheen: [
+      ['خَشَب', '🪵', 'ـشـ'],
+      ['مِنْشَفَة', '🧺', 'ـشـ'],
+      ['فَرَاش', '🦋', 'ش'],
+      ['قِرْش', '🦈', 'ش'],
+      ['جَيْش', '💂', 'ـش'],
+      ['شَجَرَة', '🌳', 'شـ'],
+      ['شَمْعَة', '🕯️', 'شـ'],
+    ],
+  };
+
+  it.each(Object.entries(UNIT_2))('Unit 2 %s: every word and answer matches the table', (setId, rows) => {
+    const set = units.find((u) => u.id === 'unit-2')!.letterForms.find((s) => s.id === setId)!;
+    expect(set.items.map((item) => [item.target, item.emoji, item.parts.filter((p) => p.type === 'blank').map((p) => p.answer)])).toEqual(
+      rows.map(([target, emoji, answer]) => [target, emoji, [answer]]),
+    );
+  });
 });
 
 describe('formsFor / formName', () => {

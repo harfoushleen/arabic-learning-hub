@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getUnit, type GameId } from '@/data/units';
+import { gameHasContent, getUnit, type GameId } from '@/data/units';
 
 // Hash routes: #/ (home), #/unit/<unitId> (unit screen), #/unit/<unitId>/<gameId> (game dialog),
 // #/unit/<unitId>/<gameId>/<subId> (a game's own sub-screen: Game 3's chosen letter set).
@@ -11,7 +11,7 @@ export interface Route {
 
 const HOME: Route = { unitId: null, gameId: null };
 
-/** Parses a hash; null if it names a unit or game that doesn't exist. */
+/** Parses a hash; null if it names a unit or game that doesn't exist, or a game that is still "coming soon". */
 export function parseHash(hash: string): Route | null {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (parts.length === 0) return HOME;
@@ -20,7 +20,7 @@ export function parseHash(hash: string): Route | null {
   if (!unit) return null;
   if (parts.length === 2) return { unitId: unit.id, gameId: null };
   const game = unit.games.find((g) => g.id === decodeURIComponent(parts[2]!));
-  if (!game) return null;
+  if (!game || !gameHasContent(unit, game.id)) return null;
   if (parts.length === 3) return { unitId: unit.id, gameId: game.id };
   // Only Game 3 has sub-screens: one per letter set.
   const set = game.id === 'letter-forms' ? unit.letterForms.find((s) => s.id === decodeURIComponent(parts[3]!)) : undefined;

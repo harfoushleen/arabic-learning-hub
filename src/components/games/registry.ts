@@ -7,4 +7,5 @@ export const gameRegistry: Record<GameId, LazyExoticComponent<ComponentType<Game
   'sentence-picture': lazy(() => import('./SentencePictureGame')),
   'letter-forms': lazy(() => import('./LetterFormsGame')),
   unscramble: lazy(() => import('./UnscrambleGame')),
+  'fill-blank': lazy(() => import('./FillBlankGame')),
 };

@@ -1,7 +1,11 @@
 // Single source of truth for all curriculum content. Static only — no runtime editing.
 // Arabic text is stored with full tashkeel and must be displayed exactly as written here.
 
-export type GameId = 'word-picture' | 'sentence-picture' | 'letter-forms' | 'unscramble';
+// A relative path with the extension (not the @/ alias): scripts/fetch-emoji-assets.mjs imports this
+// file straight into Node, which resolves neither.
+import { letterFormItem } from '../lib/arabicJoining.ts';
+
+export type GameId = 'word-picture' | 'sentence-picture' | 'letter-forms' | 'unscramble' | 'fill-blank';
 /** A contextual letter form as shown on a choice tile, e.g. 'بـ' 'ـبـ' 'ـب' 'ب' or 'ز' 'ـز'. */
 export type LetterForm = string;
 
@@ -43,6 +47,16 @@ export interface UnscrambleSet {
   image?: string;  // scene picture shown as a hint; set ONLY if the file exists in public/
 }
 export interface SentencePictureItem { id: string; sentence: string; image: string; }
+/** A chip in the fill-blank word cloud. */
+export interface FillBlankWord { id: string; text: string; }
+export type FillBlankPart =
+  | { type: 'text'; value: string }
+  // accept: the cloud words that fit this blank (several = either order, each used by one blank of the
+  // sentence). fill: the text shown once filled; omitted = the dropped word's own text.
+  | { type: 'blank'; accept: string[]; fill?: string };
+export interface FillBlankSentence { id: string; parts: FillBlankPart[]; }
+/** One word cloud shared by all of a unit's sentences: every word fills exactly one blank. */
+export interface FillBlankData { words: FillBlankWord[]; sentences: FillBlankSentence[]; }
 export type Theme = 'sky' | 'mint' | 'peach' | 'lavender' | 'lemon';
 export interface GameDef {
   id: GameId; title: string; instruction: string; emoji: string;
@@ -52,9 +66,11 @@ export interface GameDef {
 export interface Unit {
   id: string; title: string; letters: string[];
   label: string;  // e.g. 'الوَحْدَةُ الأُولَى'
+  story?: string; // e.g. 'فِي البُسْتَانِ', shown under the unit title and on the fill-blank game
   theme: Theme;
   games: GameDef[]; vocab: VocabWord[]; sentencePictures: SentencePictureItem[];
   letterForms: LetterFormSet[]; unscramble: UnscrambleSet[];
+  fillBlank?: FillBlankData;
 }
 
 // Asset conventions (paths are relative to public/, served from the site root):
@@ -82,6 +98,34 @@ const unit1Vocab: VocabWord[] = [
   { id: 'arnab', text: 'أَرْنَب', emoji: '🐇' },
   { id: 'ab', text: 'أَب', emoji: '👨‍👦', art: { src: '/art/ab.webp', type: 'webp', still: '/art/ab-still.webp' }, confusableWith: ['razi', 'zizi'] },
   { id: 'laiba', text: 'لَعِبَ', emoji: '🤸', art: { src: '/art/laiba.json', type: 'lottie' } },
+];
+
+// Unit 2 pictures are Noto emoji for now; drop real pictures in later with `image` / `art`.
+// TODO(teacher): confirm مُشْط، حَشَائِش، شَوْكَة (fork?)، مَدْرَسَة
+const unit2Vocab: VocabWord[] = [
+  { id: 'minshar', text: 'مِنْشَارٌ', emoji: '🪚' },
+  { id: 'shams', text: 'شَمْسٌ', emoji: '☀️' },
+  { id: 'musht', text: 'مُشْطٌ', emoji: '🪮' },
+  { id: 'hashaish', text: 'حَشَائِشُ', emoji: '🌿' },
+  { id: 'farasha', text: 'فَرَاشَةٌ', emoji: '🦋' },
+  { id: 'risha', text: 'رِيشَةٌ', emoji: '🪶' },
+  { id: 'shubbak', text: 'شُبَّاكٌ', emoji: '🪟' },
+  { id: 'shahina', text: 'شَاحِنَةٌ', emoji: '🚚' },
+  { id: 'shawka', text: 'شَوْكَةٌ', emoji: '🍴' },
+  { id: 'risala', text: 'رِسَالَةٌ', emoji: '✉️' },
+  { id: 'kursi', text: 'كُرْسِيٌّ', emoji: '🪑' },
+  { id: 'madrasa', text: 'مَدْرَسَةٌ', emoji: '🏫' },
+  { id: 'sayyara', text: 'سَيَّارَةٌ', emoji: '🚗' },
+  { id: 'timsah', text: 'تِمْسَاحٌ', emoji: '🐊' },
+  { id: 'lisan', text: 'لِسَانٌ', emoji: '👅' },
+  { id: 'tawus', text: 'طَاوُوسٌ', emoji: '🦚' },
+  { id: 'samak', text: 'سَمَكٌ', emoji: '🐟' },
+  { id: 'sinjab', text: 'سِنْجَابٌ', emoji: '🐿️' },
+  { id: 'masrah', text: 'مَسْرَحٌ', emoji: '🎭' },
+  { id: 'sulahfat', text: 'سُلَحْفَاةٌ', emoji: '🐢' },
+  { id: 'dirs', text: 'ضِرْسٌ', emoji: '🦷' },
+  { id: 'nasr', text: 'نَسْرٌ', emoji: '🦅' },
+  { id: 'sahir', text: 'سَاحِرٌ', emoji: '🧙' },
 ];
 
 export const units: Unit[] = [
@@ -294,11 +338,157 @@ export const units: Unit[] = [
       },
     ],
   },
+  {
+    id: 'unit-2',
+    label: 'الوَحْدَةُ الثَّانِيَةُ',
+    title: 'حَرْفَا السِّينِ وَالشِّينِ',
+    letters: ['س', 'ش'],
+    story: 'فِي البُسْتَانِ',
+    theme: 'mint',
+    games: [
+      {
+        id: 'word-picture',
+        title: 'رَبْطُ الكَلِمَةِ بِالصُّورَةِ',
+        instruction: 'أَرْبِطُ الكَلِمَةَ بِالصُّورَةِ',
+        emoji: '🖼️',
+        short: 'أَضَعُ الكَلِمَةَ تَحْتَ صُورَتِهَا',
+        theme: 'sky',
+      },
+      {
+        id: 'sentence-picture',
+        title: 'رَبْطُ الجُمْلَةِ بِالرَّسْمِ',
+        instruction: 'أَصِلُ الجُمْلَةَ بِالرَّسْمِ المُنَاسِبِ لَهَا',
+        emoji: '📖',
+        short: 'أَصِلُ الجُمْلَةَ بِرَسْمِهَا',
+        theme: 'peach',
+      },
+      {
+        id: 'letter-forms',
+        title: 'أَشْكَالُ الحُرُوفِ',
+        instruction: 'أَخْتَارُ الحَرْفَ', // the letter chooser; each set has its own instruction
+        emoji: '🔤',
+        short: 'أَخْتَارُ حَرْفًا وَأُكْمِلُ الكَلِمَةَ',
+        theme: 'mint',
+      },
+      {
+        id: 'fill-blank',
+        title: 'مَلْءُ الفَرَاغِ',
+        instruction: 'أَخْتَارُ الكَلِمَةَ المُنَاسِبَةَ وَأَضَعُهَا مَكَانَ الفَرَاغِ',
+        emoji: '✏️',
+        short: 'أَضَعُ الكَلِمَةَ فِي مَكَانِهَا',
+        theme: 'lavender',
+      },
+    ],
+    vocab: unit2Vocab,
+    sentencePictures: [], // TODO: sentences + pictures coming
+    letterForms: [
+      // TODO(teacher): confirm فَرَاش vs فِرَاش, and جَيْش vs حَشِيش
+      {
+        id: 'seen',
+        letter: 'س',
+        name: 'حَرْفُ السِّينِ',
+        instruction: 'أَضَعُ الحَرْفَ (س) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
+        items: [
+          letterFormItem('fustan', 'فُسْتَان', 'س', '👗'),
+          letterFormItem('samaka', 'سَمَكَة', 'س', '🐟'),
+          letterFormItem('kass', 'كَأْس', 'س', '🥛'),
+          letterFormItem('ananas', 'أَنَانَاس', 'س', '🍍'),
+          letterFormItem('jalasa', 'جَلَسَ', 'س', '🪑'),
+          letterFormItem('mistara', 'مِسْطَرَة', 'س', '📏'),
+        ],
+      },
+      {
+        id: 'sheen',
+        letter: 'ش',
+        name: 'حَرْفُ الشِّينِ',
+        instruction: 'أَضَعُ الحَرْفَ (ش) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
+        items: [
+          letterFormItem('khashab', 'خَشَب', 'ش', '🪵'),
+          letterFormItem('minshafa', 'مِنْشَفَة', 'ش', '🧺'),
+          letterFormItem('farash', 'فَرَاش', 'ش', '🦋'),
+          letterFormItem('qirsh', 'قِرْش', 'ش', '🦈'),
+          letterFormItem('jaysh', 'جَيْش', 'ش', '💂'),
+          letterFormItem('shajara', 'شَجَرَة', 'ش', '🌳'),
+          letterFormItem('shamaa', 'شَمْعَة', 'ش', '🕯️'),
+        ],
+      },
+    ],
+    unscramble: [],
+    fillBlank: {
+      words: [
+        { id: 'ilal-bustan', text: 'إِلَى البُسْتَان' },
+        { id: 'awraq', text: 'أَوْرَاق' },
+        { id: 'shajara', text: 'شَجَرَة' },
+        { id: 'mishmish', text: 'المِشْمِش' },
+        { id: 'akhdar', text: 'أَخْضَر' },
+        { id: 'anis', text: 'أَنِيس' },
+        { id: 'shadia', text: 'شَادْيَا' },
+      ],
+      sentences: [
+        {
+          id: 's1',
+          parts: [
+            { type: 'text', value: 'سَارَ أَنِيس وَشَادْيَا ' },
+            { type: 'blank', accept: ['ilal-bustan'], fill: 'إِلَى البُسْتَانِ' },
+            { type: 'text', value: '.' },
+          ],
+        },
+        // TODO(teacher): confirm the first word (اِخْضَرَّتْ أَوْرَاقُ ...)
+        {
+          id: 's2',
+          parts: [
+            { type: 'text', value: 'اِخْضَرَّتْ ' },
+            { type: 'blank', accept: ['awraq'], fill: 'أَوْرَاقُ' },
+            { type: 'text', value: ' ' },
+            { type: 'blank', accept: ['shajara'], fill: 'شَجَرَةِ' },
+            { type: 'text', value: ' المِشْمِشِ.' },
+          ],
+        },
+        {
+          id: 's3',
+          parts: [
+            { type: 'text', value: 'رَسَمَ أَنِيس وَشَادْيَا شَجَرَةَ ' },
+            { type: 'blank', accept: ['mishmish'], fill: 'المِشْمِشِ' },
+            { type: 'text', value: ' بِلَوْنٍ ' },
+            { type: 'blank', accept: ['akhdar'], fill: 'أَخْضَرَ' },
+            { type: 'text', value: '.' },
+          ],
+        },
+        {
+          // The two names fill the two blanks in either order (no fill: each shows its own text).
+          id: 's4',
+          parts: [
+            { type: 'text', value: 'شَكَرَتْ شَجَرَةُ المِشْمِشِ ' },
+            { type: 'blank', accept: ['anis', 'shadia'] },
+            { type: 'text', value: ' وَ' },
+            { type: 'blank', accept: ['anis', 'shadia'] },
+            { type: 'text', value: '.' },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 /** Every Game 3 word of a unit, across its letter sets. */
 export function letterFormItems(unit: Unit): LetterFormItem[] {
   return unit.letterForms.flatMap((set) => set.items);
+}
+
+/** Whether a unit has content for one of its games; a game without any shows as "coming soon". */
+export function gameHasContent(unit: Unit, gameId: GameId): boolean {
+  switch (gameId) {
+    case 'word-picture':
+      return unit.vocab.length > 0;
+    case 'sentence-picture':
+      return unit.sentencePictures.length > 0;
+    case 'letter-forms':
+      return letterFormItems(unit).length > 0;
+    case 'unscramble':
+      return unit.unscramble.some((set) => set.answers.length > 0);
+    case 'fill-blank':
+      return (unit.fillBlank?.sentences.length ?? 0) > 0;
+  }
 }
 
 export function getUnit(id: string): Unit | undefined {
