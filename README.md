@@ -20,7 +20,7 @@ Every game gives visual feedback only:
 - A correct answer pops into place; a wrong one glides back and shakes.
 - After two wrong tries, the right answer gently pulses.
 - At the end the child sees 1–3 stars and confetti, then can play again.
-- Content is shuffled on every play, so answers never line up with their targets.
+- Content is shuffled on every play, so answers never line up with their targets (fill-blank is the exception: it keeps the worksheet's order).
 
 ## Built for children and classrooms
 
@@ -56,7 +56,7 @@ All curriculum content lives in one file, **[`src/data/units.ts`](src/data/units
 - **New letter in the letter-forms game:** add a set to `letterForms`. The letter chooser picks it up automatically, and its tiles (4 forms, or 2 for letters like ز that never join forward) are worked out for you.
 - **New letter-forms word:** write it with `letterFormItem(id, target, letter, emoji)` (in `src/lib/arabicJoining.ts`). It splits the vowelled word at the letter and works out each blank's fill and form, so there are no parts to write by hand.
 - **New unit:** add it to `units`, with its own `games` list. A game whose data is empty (for example `sentencePictures: []`) shows as "قَرِيبًا". An optional `story` shows under the unit title.
-- **Fill-blank:** a `fillBlank` with `words` (the word cloud) and `sentences`. Each blank lists the cloud words it `accept`s; two blanks that accept the same two words are filled in either order.
+- **Fill-blank:** a `fillBlank` with `words` (the word cloud) and `sentences`. Each blank lists the cloud words it `accept`s; two blanks that accept the same two words are filled in either order. All sentences show at once, numbered, in the order you list them, with the cloud words below in their listed order.
 - `npm test` checks the data: every word's parts rebuild the target word, every answer matches its joining context, and every picture file exists.
 
 ## Tech

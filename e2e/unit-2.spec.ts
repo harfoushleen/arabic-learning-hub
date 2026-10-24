@@ -1,22 +1,43 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { getUnit, letterFormItems, type FillBlankPart } from '../src/data/units';
+import { getUnit, letterFormItems } from '../src/data/units';
 import { formName } from '../src/lib/arabicJoining';
 import { VIEWPORTS, expectFits } from './fit';
 
-type Blank = Extract<FillBlankPart, { type: 'blank' }>;
 
 const UNIT = getUnit('unit-2')!;
 const FILL = UNIT.fillBlank!;
-const SENTENCES = new Map(FILL.sentences.map((s) => [s.id, s]));
 const WORD_TEXT = new Map(FILL.words.map((w) => [w.id, w.text]));
 const ITEMS = new Map(letterFormItems(UNIT).map((item) => [item.id, item]));
 const ZWJ = '‍';
 
+// The worksheet's fixed order, written out so a change to units.ts can't silently change the test too.
+const SENTENCE_ORDER = ['s1', 's2', 's3', 's4'];
+const CLOUD_ORDER = ['awraquha', 'mishmish', 'ilal-bustan', 'anis', 'shadia', 'shajara', 'akhdar'];
+
 const tile = (page: Page, id: string) => page.locator(`[data-tile="${id}"]`);
-const blankAt = (page: Page, i: number) => page.locator(`[data-blank="${i}"]`);
-const sentenceCard = (page: Page) => page.locator('[data-sentence]');
-const blankIndexes = (sentenceId: string) =>
-  SENTENCES.get(sentenceId)!.parts.flatMap((p, i) => (p.type === 'blank' ? [i] : []));
+const blankAt = (page: Page, key: string) => page.locator(`[data-blank="${key}"]`);
+const cloudTiles = (page: Page) => page.locator('[data-cloud] [data-tile]');
+const checkButton = (page: Page) => page.getByRole('button', { name: 'تَحَقَّقْ' });
+const restartButton = (page: Page) => page.getByRole('button', { name: 'أَعِدِ اللُّعْبَةَ' });
+
+/** Every blank in worksheet order, keyed `${sentence id}:${part index}` like the game's data-blank. */
+const BLANKS = FILL.sentences.flatMap((s) =>
+  s.parts.flatMap((part, i) => (part.type === 'blank' ? [{ key: `${s.id}:${i}`, sentenceId: s.id, part }] : [])),
+);
+const keyOf = (sentenceId: string, n: number) => BLANKS.filter((b) => b.sentenceId === sentenceId)[n]!.key;
+
+/** The right word for every blank; `reversed` fills an either-order pair the other way round. */
+function solution(reversed = false) {
+  const plan = new Map<string, string>();
+  const taken = new Set<string>();
+  for (const b of BLANKS) {
+    const candidates = reversed ? [...b.part.accept].reverse() : b.part.accept;
+    const id = candidates.find((c) => !taken.has(c))!;
+    taken.add(id);
+    plan.set(b.key, id);
+  }
+  return plan;
+}
 
 async function center(l: Locator) {
   const box = (await l.boundingBox())!;
@@ -44,12 +65,21 @@ async function recordFlags(page: Page) {
   await page.evaluate(() => {
     const w = window as unknown as { __flags: Set<string> };
     w.__flags = new Set();
+    const note = (el: HTMLElement, attr: string) => {
+      if (el.getAttribute(attr) === 'true') w.__flags.add(`${attr.slice(5)}:${el.dataset.tile}`);
+    };
     new MutationObserver((records) => {
       for (const r of records) {
-        const el = r.target as HTMLElement;
-        if (el.getAttribute(r.attributeName!) === 'true') w.__flags.add(`${r.attributeName!.slice(5)}:${el.dataset.tile}`);
+        if (r.type === 'attributes') note(r.target as HTMLElement, r.attributeName!);
+        // A chip can be mounted already flagged (a wrong chip flying back into the cloud).
+        for (const node of r.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue;
+          for (const el of [node, ...node.querySelectorAll<HTMLElement>('[data-tile]')]) {
+            for (const attr of ['data-wiggle', 'data-shake', 'data-hint']) note(el, attr);
+          }
+        }
       }
-    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-wiggle', 'data-shake', 'data-hint'] });
+    }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-wiggle', 'data-shake', 'data-hint'] });
   });
 }
 const clearFlags = (page: Page) => page.evaluate(() => (window as unknown as { __flags: Set<string> }).__flags.clear());
@@ -60,79 +90,68 @@ const expectSaw = (page: Page, flag: string, id: string) => expect.poll(() => sa
 async function openFill(page: Page) {
   await page.goto('/#/unit/unit-2/fill-blank');
   await page.evaluate(() => document.fonts.ready);
-  await expect(sentenceCard(page)).toBeVisible();
+  await expect(page.locator('[data-sentence]')).toHaveCount(4);
   await expect(page.locator('[data-tile]')).toHaveCount(FILL.words.length);
 }
 
-/**
- * Plays every sentence by dragging the right words. `pairs: 'reversed'` fills an either-order pair the
- * other way round. Calls `onState` at the checked states, verifies each completed sentence's text, and
- * returns the sentence order.
- */
-async function playAll(
-  page: Page,
-  { pairs = 'natural', onState = async () => {} }: { pairs?: 'natural' | 'reversed'; onState?: (state: string) => Promise<void> } = {},
-) {
-  const next = page.getByRole('button', { name: 'التَّالِي' });
-  const restart = page.getByRole('button', { name: 'أَعِدِ اللُّعْبَةَ' });
-  const card = sentenceCard(page);
-  const order: string[] = [];
-  let placed = 0;
-
-  for (;;) {
-    const sentenceId = (await card.getAttribute('data-sentence'))!;
-    const sentence = SENTENCES.get(sentenceId)!;
-    order.push(sentenceId);
-    await onState(order.length === 1 ? 'start' : 'sentence start');
-
-    const taken = new Set<string>();
-    const shown: string[] = [];
-    for (const [n, i] of blankIndexes(sentenceId).entries()) {
-      const part = sentence.parts[i] as Blank;
-      const candidates = pairs === 'reversed' ? [...part.accept].reverse() : part.accept;
-      const wordId = candidates.find((id) => !taken.has(id))!;
-      taken.add(wordId);
-      const midDrag = order.length === 1 && n === 0 ? () => onState('mid-drag') : undefined;
-      await drag(page, tile(page, wordId), blankAt(page, i), midDrag);
-      placed++;
-      // The cloud holds every word not placed yet, across all the sentences.
-      await expect(page.locator('[data-tile]')).toHaveCount(FILL.words.length - placed);
-      const text = part.fill ?? WORD_TEXT.get(wordId)!;
-      await expect(page.locator(`[data-filled="${i}"]`)).toHaveText(text);
-      await expect(page.locator(`[data-filled="${i}"]`)).toHaveAttribute('data-filled-word', wordId);
-      shown[i] = text;
-    }
-
-    await expect(card).toHaveAttribute('data-complete', 'true');
-    const expected = sentence.parts.map((p, i) => (p.type === 'text' ? p.value : shown[i])).join('');
-    expect((await card.textContent())!.normalize('NFC'), `${sentenceId} sentence`).toBe(expected.normalize('NFC'));
-
-    await expect(next.or(restart)).toBeVisible();
-    if (await restart.isVisible()) break;
-    if (order.length === 1) await onState('sentence done');
-    await next.click();
-    await expect(card).not.toHaveAttribute('data-sentence', sentenceId);
+/** Drags each word onto its blank, checking the blank shows it. `onFirstDrag` runs in the middle of the first drag. */
+async function fillAll(page: Page, plan: ReadonlyMap<string, string>, onFirstDrag?: () => Promise<void>) {
+  let first = true;
+  for (const [key, id] of plan) {
+    await drag(page, tile(page, id), blankAt(page, key), first ? onFirstDrag : undefined);
+    first = false;
+    await expect(blankAt(page, key)).toHaveAttribute('data-filled-word', id);
   }
-  await onState('final screen');
-  return order;
 }
 
-/** The sentence text stays inside its card and the chips inside the cloud (the fit estimates held). */
+/** Presses تَحَقَّقْ and waits for the wrong chips to shake, fly back and settle in the cloud. */
+async function check(page: Page, wrongCount: number) {
+  await checkButton(page).click();
+  await expect(cloudTiles(page)).toHaveCount(wrongCount);
+  await expect(checkButton(page)).toHaveCount(0);
+  await expect(page.locator('[data-tile][data-shake="true"]')).toHaveCount(0);
+}
+
+/** Each completed sentence reads as the worksheet has it: the text plus every blank's fill. */
+async function expectSentencesRead(page: Page, plan: ReadonlyMap<string, string>) {
+  for (const sentence of FILL.sentences) {
+    const expected = sentence.parts
+      .map((p, i) => {
+        if (p.type === 'text') return p.value;
+        const id = plan.get(`${sentence.id}:${i}`)!;
+        return p.fill ?? WORD_TEXT.get(id)!;
+      })
+      .join('');
+    const text = await page.locator(`[data-sentence="${sentence.id}"] [data-sentence-text]`).textContent();
+    expect(text!.normalize('NFC'), `${sentence.id} sentence`).toBe(expected.normalize('NFC'));
+  }
+}
+
+/** Sentence text stays inside its card, every blank inside its card, and the cloud's chips inside the cloud. */
 async function expectContained(page: Page, state: string) {
   const m = await page.evaluate(() => {
-    const card = document.querySelector<HTMLElement>('[data-sentence]')!;
-    const text = card.querySelector('p')!.getBoundingClientRect();
-    const c = card.getBoundingClientRect();
+    const issues: string[] = [];
+    for (const card of document.querySelectorAll<HTMLElement>('[data-sentence]')) {
+      const c = card.getBoundingClientRect();
+      const t = card.querySelector('[data-sentence-text]')!.getBoundingClientRect();
+      if (t.top < c.top - 0.5 || t.bottom > c.bottom + 0.5) issues.push(`${card.dataset.sentence} text pokes out of its card`);
+      for (const b of card.querySelectorAll<HTMLElement>('[data-blank]')) {
+        const r = b.getBoundingClientRect();
+        if (r.left < c.left - 0.5 || r.right > c.right + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) {
+          issues.push(`${b.dataset.blank} pokes out of its card`);
+        }
+      }
+    }
     const cloud = document.querySelector<HTMLElement>('[data-cloud]')!.getBoundingClientRect();
-    const chipsOutside = [...document.querySelectorAll<HTMLElement>('[data-tile]')].filter((el) => {
+    for (const el of document.querySelectorAll<HTMLElement>('[data-cloud] [data-tile]')) {
       const r = el.getBoundingClientRect();
-      return r.left < cloud.left - 0.5 || r.right > cloud.right + 0.5 || r.top < cloud.top - 0.5 || r.bottom > cloud.bottom + 0.5;
-    }).length;
-    return { above: text.top - c.top, below: c.bottom - text.bottom, chipsOutside };
+      if (r.left < cloud.left - 0.5 || r.right > cloud.right + 0.5 || r.top < cloud.top - 0.5 || r.bottom > cloud.bottom + 0.5) {
+        issues.push(`chip ${el.dataset.tile} outside the cloud`);
+      }
+    }
+    return issues;
   });
-  expect(m.above, `${state}: sentence text pokes out of the top of its card`).toBeGreaterThanOrEqual(-0.5);
-  expect(m.below, `${state}: sentence text pokes out of the bottom of its card`).toBeGreaterThanOrEqual(-0.5);
-  expect(m.chipsOutside, `${state}: chips outside the cloud`).toBe(0);
+  expect(m, `${state}: layout`).toEqual([]);
 }
 
 test.describe('unit 2 shell @chromium', () => {
@@ -184,6 +203,7 @@ test.describe('unit 2 shell @chromium', () => {
   });
 });
 
+
 for (const vp of VIEWPORTS.filter((v) => v.kind !== 'phone')) {
   const browser = vp.kind === 'desktop' ? 'chromium' : 'webkit';
   const touch = vp.kind !== 'desktop';
@@ -193,16 +213,30 @@ for (const vp of VIEWPORTS.filter((v) => v.kind !== 'phone')) {
 
     test('fill-blank fits without scrolling in every state', async ({ page }) => {
       await openFill(page);
-      const seen = new Set<string>();
-      await playAll(page, {
-        onState: async (state) => {
-          seen.add(state);
-          if (state !== 'mid-drag') await page.waitForTimeout(700); // let pop animations finish
-          await expectFits(page, state, false);
-          if (state !== 'final screen') await expectContained(page, state);
-        },
-      });
-      expect([...seen].sort()).toEqual(['final screen', 'mid-drag', 'sentence done', 'sentence start', 'start']);
+      const at = async (state: string) => {
+        await page.waitForTimeout(700); // let pop animations finish
+        await expectFits(page, state, false);
+        if (state !== 'final screen') await expectContained(page, state);
+      };
+      await at('start');
+
+      // Swap two words so the first check has two wrong chips.
+      const right = solution();
+      const [a, b] = [keyOf('s3', 0), keyOf('s3', 1)];
+      const plan = new Map(right).set(a, right.get(b)!).set(b, right.get(a)!);
+      await fillAll(page, plan, () => expectFits(page, 'mid-drag', false));
+      await expect(checkButton(page)).toBeVisible();
+      await at('all filled');
+
+      await check(page, 2);
+      await at('after a check');
+
+      await drag(page, tile(page, right.get(a)!), blankAt(page, a));
+      await drag(page, tile(page, right.get(b)!), blankAt(page, b));
+      await expect(checkButton(page)).toBeVisible();
+      await checkButton(page).click();
+      await expect(restartButton(page)).toBeVisible();
+      await at('final screen');
     });
 
     test('the Unit 2 screen fits without scrolling', async ({ page }) => {
@@ -241,56 +275,64 @@ for (const [label, browser, viewport, touch] of [
   test.describe(`fill-blank drag rules ${label} @${browser}`, () => {
     test.use({ viewport, hasTouch: touch });
 
-    test('tap, elsewhere, wrong (returns) and correct drops', async ({ page }) => {
+    test('tap wiggles; chips move, swap and return; dropping elsewhere sends a chip home; the cloud never reflows', async ({ page }) => {
       await openFill(page);
       await recordFlags(page);
-      const sentenceId = (await sentenceCard(page).getAttribute('data-sentence'))!;
-      const at = blankIndexes(sentenceId)[0]!;
-      const part = SENTENCES.get(sentenceId)!.parts[at] as Blank;
-      const correctId = part.accept[0]!;
-      const wrongId = FILL.words.find((w) => !part.accept.includes(w.id))!.id;
-      const wrong = tile(page, wrongId);
-      const blank = blankAt(page, at);
-      const filled = page.locator('[data-filled]');
-      const home = await wrong.boundingBox();
+      const [k1, k2] = [keyOf('s1', 0), keyOf('s2', 0)];
+      const slot = (id: string) => page.locator(`[data-slot="${id}"]`);
+      const homes = Object.fromEntries(await Promise.all(CLOUD_ORDER.map(async (id) => [id, await slot(id).boundingBox()] as const)));
+      const stays = async () => {
+        for (const id of CLOUD_ORDER) expect(await slot(id).boundingBox(), `${id} slot`).toEqual(homes[id]);
+      };
+      const filledWith = (key: string, id: string | null) =>
+        id === null ? expect(blankAt(page, key)).toHaveAttribute('data-state', 'empty') : expect(blankAt(page, key)).toHaveAttribute('data-filled-word', id);
 
-      // A tap never places a word; it wiggles.
-      await wrong.click();
-      await expectSaw(page, 'wiggle', wrongId);
-      await expect(filled).toHaveCount(0);
+      // A tap never places a chip; it wiggles.
+      await tile(page, 'akhdar').click();
+      await expectSaw(page, 'wiggle', 'akhdar');
+      await expect(page.locator('[data-state="filled"]')).toHaveCount(0);
 
-      // Dropping elsewhere (the header strip, the story title) returns the chip and doesn't count.
-      for (const target of [{ x: viewport.width / 2, y: 40 }, page.locator('[data-story]')]) {
-        await drag(page, wrong, target);
-        await expect(wrong).not.toHaveClass(/opacity-30/);
-      }
-      await page.waitForTimeout(300); // a shake would have started by now
-      expect(await saw(page, 'shake', wrongId)).toBe(false);
-      await expect(filled).toHaveCount(0);
+      // Dropped elsewhere (the header strip): the chip goes back to its cloud slot.
+      await drag(page, tile(page, 'akhdar'), { x: viewport.width / 2, y: 40 });
+      await expect(tile(page, 'akhdar')).not.toHaveClass(/opacity-30/);
+      expect(await tile(page, 'akhdar').boundingBox()).toEqual(homes['akhdar']);
+      await expect(page.locator('[data-state="filled"]')).toHaveCount(0);
 
-      // First wrong drop: the chip glides back and shakes, the blank stays empty, no hint yet.
-      await drag(page, wrong, blank);
-      await expectSaw(page, 'shake', wrongId);
-      await expect(wrong).toHaveAttribute('data-shake', 'false');
-      await expect(wrong).not.toHaveClass(/opacity-30/);
-      expect(await wrong.boundingBox()).toEqual(home); // back exactly where it started
-      await expect(filled).toHaveCount(0);
-      await expect(blank).toBeVisible();
-      expect(await saw(page, 'hint', correctId)).toBe(false);
+      // No right/wrong judgment on a drop: any chip goes on any empty blank, and its cloud slot stays put.
+      await drag(page, tile(page, 'akhdar'), blankAt(page, k1));
+      await filledWith(k1, 'akhdar');
+      await expect(page.locator('[data-cloud] [data-tile="akhdar"]')).toHaveCount(0);
+      await stays();
 
-      // Second wrong drop on the same blank: a chip that fits it pulses.
-      await clearFlags(page);
-      await drag(page, wrong, blank);
-      await expectSaw(page, 'hint', correctId);
-      await expectSaw(page, 'shake', wrongId);
-      await expect(wrong).toHaveAttribute('data-shake', 'false');
-      await expect(filled).toHaveCount(0);
+      // A placed chip dropped elsewhere stays where it was.
+      await drag(page, tile(page, 'akhdar'), { x: viewport.width / 2, y: 40 });
+      await filledWith(k1, 'akhdar');
 
-      // The right word snaps in and leaves the cloud.
-      await drag(page, tile(page, correctId), blank);
-      await expect(page.locator(`[data-filled="${at}"]`)).toHaveText(part.fill ?? WORD_TEXT.get(correctId)!);
-      await expect(tile(page, correctId)).toHaveCount(0);
-      await expect(page.locator('[data-tile]')).toHaveCount(FILL.words.length - 1);
+      // A placed chip moves to another blank.
+      await drag(page, tile(page, 'akhdar'), blankAt(page, k2));
+      await filledWith(k1, null);
+      await filledWith(k2, 'akhdar');
+
+      // A cloud chip dropped on a filled blank swaps; the old chip returns to its own slot.
+      await drag(page, tile(page, 'shajara'), blankAt(page, k2));
+      await filledWith(k2, 'shajara');
+      expect(await tile(page, 'akhdar').boundingBox()).toEqual(homes['akhdar']);
+      await expect(page.locator('[data-cloud] [data-tile="akhdar"]')).toHaveCount(1);
+      await stays();
+
+      // A placed chip dropped on another filled blank swaps the two.
+      await drag(page, tile(page, 'mishmish'), blankAt(page, k1));
+      await filledWith(k1, 'mishmish');
+      await drag(page, tile(page, 'mishmish'), blankAt(page, k2));
+      await filledWith(k2, 'mishmish');
+      await filledWith(k1, 'shajara');
+
+      // A placed chip dropped on the cloud goes back to its slot.
+      await drag(page, tile(page, 'mishmish'), page.locator('[data-cloud]'));
+      await filledWith(k2, null);
+      expect(await tile(page, 'mishmish').boundingBox()).toEqual(homes['mishmish']);
+      await stays();
+      await expect(checkButton(page)).toHaveCount(0); // not every blank is filled
     });
   });
 }
@@ -298,58 +340,107 @@ for (const [label, browser, viewport, touch] of [
 test.describe('fill-blank rules @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
-  test('all 4 sentences complete by drag; the cloud shrinks; the final screen follows', async ({ page }) => {
+  test('all 4 sentences are visible at once, numbered, in the worksheet order; so are the cloud words', async ({ page }) => {
     await openFill(page);
-    const order = await playAll(page);
-    expect([...order].sort()).toEqual(FILL.sentences.map((s) => s.id).sort());
-    await expect(page.getByRole('button', { name: 'أَعِدِ اللُّعْبَةَ' })).toBeVisible();
-  });
-
-  test('the two names fill their blanks in either order (a replay plays them the other way round)', async ({ page }) => {
-    await openFill(page);
-    await playAll(page, { pairs: 'natural' });
-    await page.getByRole('button', { name: 'أَعِدِ اللُّعْبَةَ' }).click();
-    await expect(page.locator('[data-tile]')).toHaveCount(FILL.words.length);
-    await playAll(page, { pairs: 'reversed' }); // checks each blank shows the word dropped on it
-  });
-
-  test('either name may take either blank of the pair, and a placed word leaves the cloud', async ({ page }) => {
-    await openFill(page);
-    // Play up to the pair sentence, then drop شَادْيَا on its second blank first and أَنِيس on the first.
-    let sentenceId = (await sentenceCard(page).getAttribute('data-sentence'))!;
-    while (sentenceId !== 's4') {
-      for (const i of blankIndexes(sentenceId)) {
-        const part = SENTENCES.get(sentenceId)!.parts[i] as Blank;
-        await drag(page, tile(page, part.accept[0]!), blankAt(page, i));
-        await expect(page.locator(`[data-filled="${i}"]`)).toBeVisible();
-      }
-      await page.getByRole('button', { name: 'التَّالِي' }).click();
-      sentenceId = (await sentenceCard(page).getAttribute('data-sentence'))!;
+    const attrs = (selector: string, attr: string) =>
+      page.locator(selector).evaluateAll((els, a) => els.map((el) => (el as HTMLElement).getAttribute(a)), attr);
+    expect(await attrs('[data-sentence]', 'data-sentence')).toEqual(SENTENCE_ORDER);
+    expect(await page.locator('[data-number]').allTextContents()).toEqual(['١', '٢', '٣', '٤']);
+    expect(await attrs('[data-cloud] [data-tile]', 'data-tile')).toEqual(CLOUD_ORDER);
+    expect(await cloudTiles(page).allTextContents()).toEqual(CLOUD_ORDER.map((id) => WORD_TEXT.get(id)));
+    for (const sentence of FILL.sentences) {
+      const text = sentence.parts.map((p) => (p.type === 'text' ? p.value : '')).join('');
+      const shown = await page.locator(`[data-sentence="${sentence.id}"] [data-sentence-text]`).textContent();
+      expect(shown!.normalize('NFC')).toBe(text.normalize('NFC'));
     }
-    const [first, second] = blankIndexes('s4') as [number, number];
-    await drag(page, tile(page, 'shadia'), blankAt(page, second)); // either name may take either blank
-    await expect(page.locator(`[data-filled="${second}"]`)).toHaveText(WORD_TEXT.get('shadia')!);
-    await expect(tile(page, 'shadia')).toHaveCount(0); // gone from the cloud: it can't be placed twice
-    await drag(page, tile(page, 'anis'), blankAt(page, first));
-    await expect(page.locator(`[data-filled="${first}"]`)).toHaveText(WORD_TEXT.get('anis')!);
-    await expect(sentenceCard(page)).toHaveAttribute('data-complete', 'true');
+    await expect(page.locator('[data-blank][data-state="empty"]')).toHaveCount(7);
+    await expect(checkButton(page)).toHaveCount(0);
+    for (const id of SENTENCE_ORDER) await expect(page.locator(`[data-sentence="${id}"]`)).toBeVisible();
+
+    // Opening it again changes nothing: the order is the worksheet's.
+    for (let open = 0; open < 2; open++) {
+      await page.getByRole('button', { name: 'إِغْلَاق' }).click();
+      await page.locator('[data-game-card="fill-blank"]').click();
+      await expect(page.locator('[data-sentence]')).toHaveCount(4);
+      expect(await attrs('[data-sentence]', 'data-sentence')).toEqual(SENTENCE_ORDER);
+      expect(await attrs('[data-cloud] [data-tile]', 'data-tile')).toEqual(CLOUD_ORDER);
+    }
   });
 
-  test('sentence order and chip order are shuffled on every open', async ({ page }) => {
+  test('check: right blanks lock green with their fill; wrong chips shake and return to their slots; a blank wrong twice pulses its chip', async ({ page }) => {
     await openFill(page);
-    const seen = new Set<string>();
-    for (let open = 0; open < 6; open++) {
-      if (open > 0) {
-        await page.getByRole('button', { name: 'إِغْلَاق' }).click();
-        await page.locator('[data-game-card="fill-blank"]').click();
-        await expect(sentenceCard(page)).toBeVisible();
-      }
-      const first = await sentenceCard(page).getAttribute('data-sentence');
-      const chips = await page.locator('[data-tile]').evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.tile));
-      expect([...chips].sort()).toEqual(FILL.words.map((w) => w.id).sort());
-      seen.add(`${first}|${chips.join(',')}`);
+    await recordFlags(page);
+    const right = solution();
+    const [a, b] = [keyOf('s3', 0), keyOf('s3', 1)];
+    // One swap is the smallest mistake there is: two chips in each other's blanks.
+    const wrongPlan = new Map(right).set(a, right.get(b)!).set(b, right.get(a)!);
+    const [idA, idB] = [right.get(a)!, right.get(b)!];
+    await fillAll(page, wrongPlan);
+    expect(await saw(page, 'hint', idA)).toBe(false);
+
+    await check(page, 2);
+    await expectSaw(page, 'shake', idA);
+    await expectSaw(page, 'shake', idB);
+    await expect(page.locator('[data-blank][data-state="locked"]')).toHaveCount(5);
+    for (const key of [a, b]) await expect(blankAt(page, key)).toHaveAttribute('data-state', 'empty');
+    // A locked blank shows its fill text, not the chip's.
+    const s1 = keyOf('s1', 0);
+    await expect(blankAt(page, s1)).toHaveText('إِلَى البُسْتَانِ');
+    await expect(blankAt(page, keyOf('s2', 0))).toHaveText('شَجَرَةُ');
+    // The wrong chips are back on their own cloud slots, exactly.
+    for (const id of [idA, idB]) {
+      expect(await tile(page, id).boundingBox()).toEqual(await page.locator(`[data-slot="${id}"]`).boundingBox());
     }
-    expect(seen.size, 'every open looked the same').toBeGreaterThan(1);
+    expect(await saw(page, 'hint', idA)).toBe(false); // wrong once: no hint yet
+
+    // Locked blanks are done: a chip dropped on one comes straight back.
+    await drag(page, tile(page, idA), blankAt(page, s1));
+    await expect(blankAt(page, s1)).toHaveAttribute('data-state', 'locked');
+    await expect(blankAt(page, s1)).toHaveText('إِلَى البُسْتَانِ');
+
+    // The same mistake again: both blanks are now wrong twice, so each pulses its right chip.
+    await clearFlags(page);
+    await drag(page, tile(page, idB), blankAt(page, a));
+    await drag(page, tile(page, idA), blankAt(page, b));
+    await check(page, 2);
+    await expectSaw(page, 'hint', idA);
+    await expectSaw(page, 'hint', idB);
+
+    await drag(page, tile(page, idA), blankAt(page, a));
+    await drag(page, tile(page, idB), blankAt(page, b));
+    await checkButton(page).click();
+    await expect(restartButton(page)).toBeVisible();
+    // 5 of the 7 were right on the first check: 2 stars.
+    await expect(page.getByRole('img', { name: '2 / 3' })).toBeVisible();
+  });
+
+  test('all 7 right on the first check finishes with 3 stars; a replay starts over in the same order, and the names go either way', async ({ page }) => {
+    await openFill(page);
+    const natural = solution();
+    await fillAll(page, natural);
+    await expect(page.locator('[data-blank][data-state="filled"]')).toHaveCount(7);
+    await checkButton(page).click();
+    await expect(page.locator('[data-blank][data-state="locked"]')).toHaveCount(7);
+    await expect(page.locator('[data-sentence][data-complete="true"]')).toHaveCount(4);
+    await expectSentencesRead(page, natural);
+    await expect(restartButton(page)).toBeVisible();
+    await expect(page.getByRole('img', { name: '3 / 3' })).toBeVisible();
+
+    await restartButton(page).click();
+    await expect(page.locator('[data-sentence]')).toHaveCount(4);
+    expect(await cloudTiles(page).evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.tile))).toEqual(CLOUD_ORDER);
+    await expect(page.locator('[data-blank][data-state="empty"]')).toHaveCount(7);
+
+    // Sentence 4 accepts the names the other way round.
+    const reversed = solution(true);
+    const [n1, n2] = [keyOf('s4', 0), keyOf('s4', 1)];
+    expect([reversed.get(n1), reversed.get(n2)]).toEqual(['shadia', 'anis']);
+    await fillAll(page, reversed);
+    await checkButton(page).click();
+    await expect(page.locator('[data-blank][data-state="locked"]')).toHaveCount(7);
+    await expectSentencesRead(page, reversed);
+    await expect(restartButton(page)).toBeVisible();
+    await expect(page.getByRole('img', { name: '3 / 3' })).toBeVisible();
   });
 });
 

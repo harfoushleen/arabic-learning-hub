@@ -102,9 +102,12 @@ const unit1Vocab: VocabWord[] = [
 
 // Unit 2 pictures are in public/images/unit-2/<id>.<ext>; a word without one yet (minshar, shams, lisan) shows its Noto emoji.
 // TODO(teacher): confirm شَوْكَة (fork?)، مَدْرَسَة
+/** Animated WebP in public/images/unit-2/ with its first-frame still. */
+const webpArt = (id: string): Art => ({ src: `/images/unit-2/${id}.webp`, type: 'webp', still: `/images/unit-2/${id}-still.webp` });
+
 const unit2Vocab: VocabWord[] = [
   { id: 'minshar', text: 'مِنْشَارٌ', emoji: '🪚' },
-  { id: 'shams', text: 'شَمْسٌ', emoji: '☀️' },
+  { id: 'shams', text: 'شَمْسٌ', emoji: '☀️', art: webpArt('shams') },
   { id: 'shaar', text: 'شَعْرٌ', emoji: '💇', art: { src: '/images/unit-2/shaar.webp', type: 'webp', still: '/images/unit-2/shaar-still.webp' } },
   { id: 'khuffash', text: 'خُفَّاشٌ', emoji: '🦇', art: { src: '/images/unit-2/khuffash.webp', type: 'webp', still: '/images/unit-2/khuffash-still.webp' } },
   { id: 'furshah', text: 'فُرْشَاةٌ', emoji: '🪥', art: { src: '/images/unit-2/furshah.webp', type: 'webp', still: '/images/unit-2/furshah-still.webp' } },
@@ -117,7 +120,7 @@ const unit2Vocab: VocabWord[] = [
   { id: 'madrasa', text: 'مَدْرَسَةٌ', emoji: '🏫', art: { src: '/images/unit-2/madrasa.webp', type: 'webp', still: '/images/unit-2/madrasa-still.webp' } },
   { id: 'sayyara', text: 'سَيَّارَةٌ', emoji: '🚗', art: { src: '/images/unit-2/sayyara.webp', type: 'webp', still: '/images/unit-2/sayyara-still.webp' } },
   { id: 'timsah', text: 'تِمْسَاحٌ', emoji: '🐊', art: { src: '/images/unit-2/timsah.webp', type: 'webp', still: '/images/unit-2/timsah-still.webp' } },
-  { id: 'lisan', text: 'لِسَانٌ', emoji: '👅' },
+  { id: 'lisan', text: 'لِسَانٌ', emoji: '👅', art: webpArt('lisan') }, // idle still is the LAST frame (the tongue only shows there)
   { id: 'tawus', text: 'طَاوُوسٌ', emoji: '🦚', art: { src: '/images/unit-2/tawus.webp', type: 'webp', still: '/images/unit-2/tawus-still.webp' } },
   { id: 'samak', text: 'سَمَكٌ', emoji: '🐟', art: { src: '/images/unit-2/samak.webp', type: 'webp', still: '/images/unit-2/samak-still.webp' } },
   { id: 'sinjab', text: 'سِنْجَابٌ', emoji: '🐿️', art: { src: '/images/unit-2/sinjab.webp', type: 'webp', still: '/images/unit-2/sinjab-still.webp' } },
@@ -398,10 +401,10 @@ export const units: Unit[] = [
         name: 'حَرْفُ السِّينِ',
         instruction: 'أَضَعُ الحَرْفَ (س) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
         items: [
-          letterFormItem('fustan', 'فُسْتَان', 'س', '👗'),
+          { ...letterFormItem('fustan', 'فُسْتَان', 'س', '👗'), art: webpArt('fustan') },
           { ...letterFormItem('samaka', 'سَمَكَة', 'س', '🐟'), ...vocabPicture('samak') }, // the same fish as the word game
-          letterFormItem('kass', 'كَأْس', 'س', '🥛'),
-          letterFormItem('ananas', 'أَنَانَاس', 'س', '🍍'),
+          { ...letterFormItem('kass', 'كَأْس', 'س', '🥛'), art: webpArt('kass') },
+          { ...letterFormItem('ananas', 'أَنَانَاس', 'س', '🍍'), art: webpArt('ananas') },
           { ...letterFormItem('jalasa', 'جَلَسَ', 'س', '🪑'), ...vocabPicture('kursi') }, // the same chair as the word game
           letterFormItem('mistara', 'مِسْطَرَة', 'س', '📏'),
         ],

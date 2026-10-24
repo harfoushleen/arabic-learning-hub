@@ -64,6 +64,7 @@ Fonts (self-hosted via @fontsource, Arabic subset only): Noto Naskh Arabic 700 f
 - Games read content from `units.ts` via `unitId` prop; no hardcoded words in components.
 
 - Every game randomizes its content order on every open and every replay. Answer options never line up with their targets or match the correct order. Use src/lib/shuffle.ts. Games 2–4 follow this too: Game 2 shuffles sentences and pictures independently with no row aligned with its match; Game 3 shuffles the word order and the 4 choice tiles per word; Game 4 shuffles set order, and its tiles are never in the correct order.
+- Exception: fill-blank keeps the worksheet's order for sentences and cloud words.
 
 - Before finishing any task, run `npm run build`, `npx tsc --noEmit`, and `npx vitest run`.
 
