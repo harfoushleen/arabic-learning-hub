@@ -402,7 +402,7 @@ export const units: Unit[] = [
         instruction: 'أَضَعُ الحَرْفَ (س) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
         items: [
           { ...letterFormItem('fustan', 'فُسْتَان', 'س', '👗'), art: webpArt('fustan') },
-          { ...letterFormItem('samaka', 'سَمَكَة', 'س', '🐟'), ...vocabPicture('samak') }, // the same fish as the word game
+          letterFormItem('samaka', 'سَمَكَة', 'س', '🐟'),
           { ...letterFormItem('kass', 'كَأْس', 'س', '🥛'), art: webpArt('kass') },
           { ...letterFormItem('ananas', 'أَنَانَاس', 'س', '🍍'), art: webpArt('ananas') },
           { ...letterFormItem('jalasa', 'جَلَسَ', 'س', '🪑'), ...vocabPicture('kursi') }, // the same chair as the word game
