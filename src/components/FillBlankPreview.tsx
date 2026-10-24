@@ -1,7 +1,7 @@
 import type { Unit } from '@/data/units';
 
 /**
- * Unit-screen card art for the fill-blank game: the unit's first sentence with a dashed blank and one
+ * Unit-screen card art for the fill-blank game: sentence 1 (the first, in worksheet order) with a dashed blank and one
  * word floating beside it. Decorative only. It is `height` tall (any CSS length, the same as the other
  * cards' picture) on screens wide enough for one line, and wraps to a second line on narrow ones.
  */

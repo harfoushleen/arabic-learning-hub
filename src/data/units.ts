@@ -128,6 +128,15 @@ const unit2Vocab: VocabWord[] = [
   { id: 'sahir', text: 'سَاحِرٌ', emoji: '🧙', image: '/images/unit-2/sahir.jpg' },
 ];
 
+/**
+ * A Unit 2 word that also appears in another game uses exactly the same picture there: the picture is
+ * taken from the vocab word, never drawn or chosen twice.
+ */
+const vocabPicture = (id: string): Pick<VocabWord, 'art' | 'image'> => {
+  const { art, image } = unit2Vocab.find((w) => w.id === id)!;
+  return { art, image };
+};
+
 export const units: Unit[] = [
   {
     id: 'unit-1',
@@ -382,7 +391,7 @@ export const units: Unit[] = [
     vocab: unit2Vocab,
     sentencePictures: [], // TODO: sentences + pictures coming
     letterForms: [
-      // TODO(teacher): confirm فَرَاش vs فِرَاش, and جَيْش vs حَشِيش
+      // TODO(teacher): confirm فَرَاشَة (butterfly), and جَيْش vs حَشِيش
       {
         id: 'seen',
         letter: 'س',
@@ -390,10 +399,10 @@ export const units: Unit[] = [
         instruction: 'أَضَعُ الحَرْفَ (س) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
         items: [
           letterFormItem('fustan', 'فُسْتَان', 'س', '👗'),
-          letterFormItem('samaka', 'سَمَكَة', 'س', '🐟'),
+          { ...letterFormItem('samaka', 'سَمَكَة', 'س', '🐟'), ...vocabPicture('samak') }, // the same fish as the word game
           letterFormItem('kass', 'كَأْس', 'س', '🥛'),
           letterFormItem('ananas', 'أَنَانَاس', 'س', '🍍'),
-          letterFormItem('jalasa', 'جَلَسَ', 'س', '🪑'),
+          { ...letterFormItem('jalasa', 'جَلَسَ', 'س', '🪑'), ...vocabPicture('kursi') }, // the same chair as the word game
           letterFormItem('mistara', 'مِسْطَرَة', 'س', '📏'),
         ],
       },
@@ -404,8 +413,8 @@ export const units: Unit[] = [
         instruction: 'أَضَعُ الحَرْفَ (ش) بِالشَّكْلِ المُنَاسِبِ مَكَانَ النُّقَطِ',
         items: [
           letterFormItem('khashab', 'خَشَب', 'ش', '🪵'),
-          letterFormItem('minshafa', 'مِنْشَفَة', 'ش', '🧺'),
-          letterFormItem('farash', 'فَرَاش', 'ش', '🦋'),
+          { ...letterFormItem('minshafa', 'مِنْشَفَة', 'ش', '🛁'), image: '/images/unit-2/minshafa.svg' }, // no towel emoji exists
+          letterFormItem('farasha', 'فَرَاشَة', 'ش', '🦋'),
           letterFormItem('qirsh', 'قِرْش', 'ش', '🦈'),
           letterFormItem('jaysh', 'جَيْش', 'ش', '💂'),
           letterFormItem('shajara', 'شَجَرَة', 'ش', '🌳'),

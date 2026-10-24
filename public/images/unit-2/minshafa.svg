@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Cartoon towel hanging from a hook (drawn for this project). -->
+  <circle cx="100" cy="22" r="10" fill="none" stroke="#9A8F7C" stroke-width="6"/>
+  <rect x="40" y="34" width="120" height="132" rx="12" fill="#6EC6E6" stroke="#3B8FB5" stroke-width="5"/>
+  <rect x="40" y="112" width="120" height="12" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="40" y="132" width="120" height="7" fill="#FFFFFF" opacity="0.9"/>
+  <path d="M60 60 q12 -10 24 0 t24 0 t24 0" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+  <g stroke="#3B8FB5" stroke-width="4" stroke-linecap="round">
+    <path d="M52 168v16M68 168v16M84 168v16M100 168v16M116 168v16M132 168v16M148 168v16"/>
+  </g>
+</svg>

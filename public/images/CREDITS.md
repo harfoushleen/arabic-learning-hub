@@ -41,7 +41,9 @@ All supplied by the teacher (classroom slides). The animated ones were converted
 | `unit-2/shahina.jpg` | — | TBD | Supplied by the teacher (classroom slides) |
 | `unit-2/shawka.png` | — | TBD | Supplied by the teacher (classroom slides) |
 
-Words without a file yet (minshar, shams, lisan) show their Noto emoji.
+| `unit-2/minshafa.svg` (towel, letter-forms word مِنْشَفَة) | — | Drawn for this project | Original artwork for this project (Noto has no towel emoji) |
+
+Words without a file yet (minshar, shams, lisan) show their Noto emoji. The letter-forms words سَمَكَة and جَلَسَ reuse the word game's `samak` and `kursi` pictures.
 
 ## Emoji art (`public/emoji/`)
 

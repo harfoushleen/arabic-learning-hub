@@ -211,7 +211,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
   const [shaking, setShaking] = useState<ReadonlySet<string>>(() => new Set()); // word ids
   const [flying, setFlying] = useState<Readonly<Record<string, { dx: number; dy: number }>>>({});
   const [wiggleChip, setWiggleChip] = useState<string | null>(null);
-  const [hintChip, setHintChip] = useState<string | null>(null);
+  const [hintChips, setHintChips] = useState<ReadonlySet<string>>(() => new Set()); // word ids
   const [popped, setPopped] = useState<ReadonlySet<string>>(() => new Set()); // blank keys
   const later = useTimers();
   useFontsReady(); // re-measure text once Naskh is loaded
@@ -299,7 +299,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
       later(() => setPopped((p) => new Set([...p].filter((k) => k !== target))), POP_MS);
     }
     setPlaced(next);
-    setHintChip(null);
+    setHintChips(new Set());
     return 'correct';
   }
 
@@ -344,12 +344,18 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
         setFlying({});
         setPhase('playing');
         // A blank that is wrong for the second time pulses a chip that fits it.
-        const lockedIds = new Set([...nextLocked].map((key) => placed[key]!));
-        const twice = wrong.find((b) => nextMisses[b.key] === 2);
-        const hint = twice?.part.accept.find((id) => !lockedIds.has(id));
-        if (hint) {
-          setHintChip(hint);
-          later(() => setHintChip((cur) => (cur === hint ? null : cur)), HINT_MS);
+        const taken = new Set([...nextLocked].map((key) => placed[key]!));
+        const hints = new Set<string>();
+        for (const b of wrong) {
+          const id = nextMisses[b.key] === 2 ? b.part.accept.find((a) => !taken.has(a)) : undefined;
+          if (id) {
+            taken.add(id);
+            hints.add(id);
+          }
+        }
+        if (hints.size > 0) {
+          setHintChips(hints);
+          later(() => setHintChips((cur) => (cur === hints ? new Set() : cur)), HINT_MS);
         }
       }, reduced ? 0 : FLY_MS);
     }, reduced ? 0 : SHAKE_MS);
@@ -370,7 +376,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
       bind={bind}
       data={{
         'data-tile': id,
-        'data-hint': hintChip === id,
+        'data-hint': hintChips.has(id),
         'data-wiggle': wiggleChip === id,
         'data-shake': shaking.has(id),
       }}
@@ -381,7 +387,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
       className={cn(
         'flex cursor-grab items-center justify-center whitespace-nowrap rounded-2xl border-[3px] border-white bg-white text-vowelled shadow-md',
         shaking.has(id) && 'animate-shake',
-        hintChip === id && 'animate-hint',
+        hintChips.has(id) && 'animate-hint',
         wiggleChip === id && 'animate-wiggle',
         flying[id] && 'relative z-30',
         extra,
@@ -437,7 +443,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
                   >
                     {(n + 1).toLocaleString('ar-EG')}
                   </span>
-                  <div className="min-w-0 flex-1 text-center text-vowelled" style={{ fontSize: m.font }}>
+                  <div data-sentence-text className="min-w-0 flex-1 text-center text-vowelled" style={{ fontSize: m.font }}>
                     {sentence.parts.map((part, i) => {
                       if (part.type === 'text') return <span key={i}>{part.value}</span>;
                       // No gap on a side where the text is attached to the word (وَ + name).
