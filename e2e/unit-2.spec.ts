@@ -94,6 +94,37 @@ async function openSentencePicture(page: Page) {
   await expect(page.locator('[data-row]')).toHaveCount(SENTENCE_PICTURES.length);
 }
 
+const UNSCRAMBLE = new Map(UNIT.unscramble.map((set) => [set.id, set]));
+
+/** Plays every sentence by dragging its words in order. Calls `onState` at the checked states; returns the set order. */
+async function playUnscramble(page: Page, onState: (state: string) => Promise<void> = async () => {}) {
+  const next = page.getByRole('button', { name: 'التَّالِي' });
+  const strip = page.locator('[data-strip]');
+  const order: string[] = [];
+  for (;;) {
+    const id = (await strip.getAttribute('data-strip'))!;
+    const set = UNSCRAMBLE.get(id)!;
+    order.push(id);
+    await onState(order.length === 1 ? 'start' : 'set start');
+    const answer = set.answers[0]!;
+    for (const [i, tileId] of answer.entries()) {
+      const midDrag = order.length === 1 && i === 0 ? () => onState('mid-drag') : undefined;
+      await drag(page, page.locator(`[data-tile="${tileId}"]`), strip, midDrag);
+      await expect(page.locator(`[data-slot="${i}"]`)).toHaveAttribute('data-slot-tile', tileId);
+    }
+    await expect(strip).toHaveAttribute('data-complete', 'true');
+    const words = answer.map((tileId) => set.tiles.find((t) => t.id === tileId)!.text);
+    expect((await strip.textContent())!.normalize('NFC')).toBe((words.join('') + '.').normalize('NFC'));
+    await expect(next.or(restartButton(page))).toBeVisible();
+    if (await restartButton(page).isVisible()) break;
+    if (order.length === 1) await onState('set done');
+    await next.click();
+    await expect(strip).not.toHaveAttribute('data-strip', id);
+  }
+  await onState('final screen');
+  return order;
+}
+
 async function openFill(page: Page) {
   await page.goto('/#/unit/unit-2/fill-blank');
   await page.evaluate(() => document.fonts.ready);
@@ -156,15 +187,15 @@ async function expectContained(page: Page, state: string) {
 test.describe('unit 2 shell @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
-  test('home shows 2 unit cards; Unit 2 shows its story and its 4 playable game cards', async ({ page }) => {
+  test('home shows 2 unit cards; Unit 2 shows its story and its 5 playable game cards', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('[data-unit-card]')).toHaveCount(2);
     await page.locator('[data-unit-card="unit-2"]').click();
     await expect(page).toHaveURL(/#\/unit\/unit-2$/);
     await expect(page.locator('[data-unit-story]')).toHaveText('فِي البُسْتَانِ');
-    await expect(page.locator('[data-game-card]')).toHaveCount(4);
+    await expect(page.locator('[data-game-card]')).toHaveCount(5);
     const ids = await page.locator('[data-game-card]').evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.gameCard));
-    expect(ids).toEqual(['word-picture', 'sentence-picture', 'letter-forms', 'fill-blank']);
+    expect(ids).toEqual(['word-picture', 'sentence-picture', 'letter-forms', 'fill-blank', 'unscramble']);
 
     // Every game has content now: none is a "coming soon" card.
     for (const id of ids) {
@@ -250,10 +281,23 @@ for (const vp of VIEWPORTS.filter((v) => v.kind !== 'phone')) {
       await expectFits(page, 'final screen', false);
     });
 
+    test('unscramble fits without scrolling in every state', async ({ page }) => {
+      await page.goto('/#/unit/unit-2/unscramble');
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page.locator('[data-strip]')).toBeVisible();
+      const seen = new Set<string>();
+      await playUnscramble(page, async (state) => {
+        seen.add(state);
+        if (state !== 'mid-drag') await page.waitForTimeout(700); // let pop animations finish
+        await expectFits(page, state, false);
+      });
+      expect([...seen].sort()).toEqual(['final screen', 'mid-drag', 'set done', 'set start', 'start']);
+    });
+
     test('the Unit 2 screen fits without scrolling', async ({ page }) => {
       await page.goto('/#/unit/unit-2');
       await page.evaluate(() => document.fonts.ready);
-      await expect(page.locator('[data-game-card]')).toHaveCount(4);
+      await expect(page.locator('[data-game-card]')).toHaveCount(5);
       const m = await page.evaluate(() => {
         const doc = document.scrollingElement ?? document.documentElement;
         const vw = window.innerWidth;
@@ -356,7 +400,7 @@ function shownFor(key: string, wordId: string) {
 test.describe('unit 2 sentence-picture @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
-  test('the 4 story sentences and scenes match by drag; a wrong pair is refused; rows never line up', async ({ page }) => {
+  test('the 4 story sentences and scenes match by drag; a wrong pair is refused; sentences keep the story order, pictures are shuffled so no row lines up', async ({ page }) => {
     // Open it from the unit screen, like a child would.
     await page.goto('/#/unit/unit-2');
     await page.locator('[data-game-card="sentence-picture"]').click();
@@ -366,9 +410,11 @@ test.describe('unit 2 sentence-picture @chromium', () => {
       els.map((el) => [(el as HTMLElement).dataset.rowSentence, (el as HTMLElement).dataset.rowPicture]),
     );
     expect(rows.every(([s, p]) => s !== p), 'a row holds a matching pair').toBe(true);
-    expect(rows.map(([s]) => s).sort()).toEqual(SENTENCE_PICTURES.map((s) => s.id));
+    // The sentences run 1, 2, 3, 4 down the page, as in the story; only the pictures are shuffled.
+    expect(rows.map(([s]) => s)).toEqual(SENTENCE_PICTURES.map((s) => s.id));
+    expect([...rows.map(([, p]) => p)].sort()).toEqual(SENTENCE_PICTURES.map((s) => s.id));
     const shown = await page.locator('[data-sentence]').evaluateAll((els) => els.map((el) => el.textContent));
-    expect(shown.map((t) => t!.normalize('NFC')).sort()).toEqual(SENTENCE_PICTURES.map((s) => s.sentence.normalize('NFC')).sort());
+    expect(shown.map((t) => t!.normalize('NFC'))).toEqual(SENTENCE_PICTURES.map((s) => s.sentence.normalize('NFC')));
 
     // A wrong pair is refused: no line, nothing matched.
     const [a, b] = SENTENCE_PICTURES;
@@ -381,6 +427,53 @@ test.describe('unit 2 sentence-picture @chromium', () => {
     }
     await expect(restartButton(page)).toBeVisible();
     await expect(page.getByRole('img', { name: '2 / 3' })).toBeVisible(); // one of 4 wrong on the first try
+  });
+});
+
+test.describe('unit 2 unscramble @chromium', () => {
+  test.use({ viewport: { width: 1280, height: 620 } });
+
+  test('opens from the 5th card; all 4 story sentences complete by drag, each with its scene', async ({ page }) => {
+    await page.goto('/#/unit/unit-2');
+    await page.locator('[data-game-card="unscramble"]').click();
+    await expect(page.locator('#active-game-container[data-game="unscramble"]')).toBeVisible();
+    await expect(page.locator('[data-picture]')).toBeVisible();
+    const order = await playUnscramble(page);
+    expect(order).toEqual(['set-1', 'set-2', 'set-3', 'set-4']); // the story order, not shuffled
+    await expect(restartButton(page)).toBeVisible();
+  });
+
+  test('a wrong word is refused at once; the tiles never start in the right order but do change between opens; the sentences stay in story order', async ({ page }) => {
+    await page.goto('/#/unit/unit-2/unscramble');
+    await page.evaluate(() => document.fonts.ready);
+    await recordFlags(page);
+    const strip = page.locator('[data-strip]');
+    const banks = new Set<string>();
+    for (let open = 0; open < 6; open++) {
+      if (open > 0) {
+        await page.getByRole('button', { name: 'إِغْلَاق' }).click();
+        await page.locator('[data-game-card="unscramble"]').click();
+      }
+      await expect(strip).toBeVisible();
+      const id = (await strip.getAttribute('data-strip'))!;
+      expect(id, 'every open starts with sentence 1').toBe('set-1');
+      const answer = UNSCRAMBLE.get(id)!.answers[0]!;
+      const bank = await page.locator('[data-bank] [data-tile]').evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.tile));
+      expect(bank, `${id} starts solved`).not.toEqual(answer);
+      expect([...bank].sort()).toEqual([...answer].sort());
+      banks.add(bank.join(','));
+    }
+    expect(banks.size, 'the tiles looked the same on every open').toBeGreaterThan(1);
+
+    const id = (await strip.getAttribute('data-strip'))!;
+    const answer = UNSCRAMBLE.get(id)!.answers[0]!;
+    const wrongId = answer[1]!; // the second word, where the first belongs
+    await drag(page, page.locator(`[data-tile="${wrongId}"]`), strip);
+    await expectSaw(page, 'shake', wrongId);
+    await expect(page.locator(`[data-tile="${wrongId}"]`)).toHaveAttribute('data-shake', 'false');
+    await expect(page.locator('[data-slot-tile]')).toHaveCount(0);
+    await drag(page, page.locator(`[data-tile="${answer[0]}"]`), strip);
+    await expect(page.locator('[data-slot="0"]')).toHaveAttribute('data-slot-tile', answer[0]!);
   });
 });
 

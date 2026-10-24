@@ -20,7 +20,7 @@ Every game gives visual feedback only:
 - A correct answer pops into place; a wrong one glides back and shakes.
 - After two wrong tries, the right answer gently pulses.
 - At the end the child sees 1–3 stars and confetti, then can play again.
-- Content is shuffled on every play, so answers never line up with their targets (fill-blank is the exception: it keeps the worksheet's order).
+- Content is shuffled on every play, so answers never line up with their targets (fill-blank, and the sentence games of a unit marked `inOrder` like Unit 2, keep their sentences in the textbook's order; pictures and word tiles still shuffle).
 
 ## Built for children and classrooms
 
