@@ -3,13 +3,15 @@ import { units } from '../src/data/units';
 import { VIEWPORTS } from './fit';
 
 const UNIT = units[0]!;
+// Teacher-only units stay off the home screen (covered in unit-2.spec.ts).
+const PUBLIC_COUNT = units.filter((u) => !u.teacherOnly).length;
 
 test.describe('shell navigation @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
   test('home lists the units; a unit card opens its 4 games', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('[data-unit-card]')).toHaveCount(units.length);
+    await expect(page.locator('[data-unit-card]')).toHaveCount(PUBLIC_COUNT);
     await page.locator(`[data-unit-card="${UNIT.id}"]`).click();
     await expect(page).toHaveURL(new RegExp(`#/unit/${UNIT.id}$`));
     await expect(page.locator('[data-game-card]')).toHaveCount(4);
@@ -17,7 +19,7 @@ test.describe('shell navigation @chromium', () => {
     // The back button returns home.
     await page.getByRole('button', { name: 'رُجُوع' }).click();
     await expect(page).toHaveURL(/#\/$/);
-    await expect(page.locator('[data-unit-card]')).toHaveCount(units.length);
+    await expect(page.locator('[data-unit-card]')).toHaveCount(PUBLIC_COUNT);
   });
 
   test('opening a game sets the hash; browser back closes the dialog, then goes home', async ({ page }) => {
@@ -34,7 +36,7 @@ test.describe('shell navigation @chromium', () => {
 
     await page.goBack();
     await expect(page).toHaveURL(/#\/$/);
-    await expect(page.locator('[data-unit-card]')).toHaveCount(units.length);
+    await expect(page.locator('[data-unit-card]')).toHaveCount(PUBLIC_COUNT);
   });
 
   test('the close button updates the hash', async ({ page }) => {
@@ -59,7 +61,7 @@ test.describe('shell navigation @chromium', () => {
     for (const hash of ['#/unit/nope', `#/unit/${UNIT.id}/nope`, '#/whatever']) {
       await page.goto(`/${hash}`);
       await expect(page).toHaveURL(/#\/$/);
-      await expect(page.locator('[data-unit-card]')).toHaveCount(units.length);
+      await expect(page.locator('[data-unit-card]')).toHaveCount(PUBLIC_COUNT);
     }
   });
 

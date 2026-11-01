@@ -2,7 +2,7 @@
 // WebKit shapes each text run on its own, so a split word loses its connections unless a
 // ZERO WIDTH JOINER sits on both sides of every split where the letters truly connect.
 
-import type { LetterForm, LetterFormPart } from '@/data/units';
+import type { LetterForm, LetterFormItem, LetterFormPart } from '@/data/units';
 
 export const ZWJ = '‍';
 
@@ -62,6 +62,37 @@ export function expectedForm(letter: string, prev: string | null, next: string |
   if (joinsPrev) return TATWEEL + letter;
   if (joinsNext) return letter + TATWEEL;
   return letter;
+}
+
+/**
+ * Builds a letter-forms word from its full vowelled `target`: every `letter` in it becomes a blank
+ * whose `fill` is that letter with its own tashkeel and whose `answer` is the form it takes between
+ * its neighbors; the text around the blanks becomes the `text` parts. Throws if the letter is missing.
+ */
+export function letterFormItem(id: string, target: string, letter: string, emoji: string): LetterFormItem {
+  // A cluster is a base letter plus the marks that follow it.
+  const clusters: string[] = [];
+  for (const ch of target) {
+    if (stripTashkeel(ch) === '' && clusters.length > 0) clusters[clusters.length - 1] += ch;
+    else clusters.push(ch);
+  }
+  const bases = clusters.map((cluster) => [...cluster][0]!);
+
+  const parts: LetterFormPart[] = [];
+  let text = '';
+  clusters.forEach((cluster, i) => {
+    if (bases[i] !== letter) {
+      text += cluster;
+      return;
+    }
+    if (text) parts.push({ type: 'text', value: text });
+    text = '';
+    parts.push({ type: 'blank', answer: expectedForm(letter, bases[i - 1] ?? null, bases[i + 1] ?? null), fill: cluster });
+  });
+  if (text) parts.push({ type: 'text', value: text });
+
+  if (!parts.some((part) => part.type === 'blank')) throw new Error(`letterFormItem: ${letter} is not in ${target}`);
+  return { id, target, parts, emoji };
 }
 
 export interface JoinedSegment {

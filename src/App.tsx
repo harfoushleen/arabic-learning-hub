@@ -1,15 +1,20 @@
 import { Suspense, useEffect, useState, type CSSProperties } from 'react';
 import { EmojiArt } from '@/components/EmojiArt';
+import { FillBlankPreview } from '@/components/FillBlankPreview';
+import { TeacherLock } from '@/components/TeacherLock';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { GameStage } from '@/components/games/GameStage';
 import { gameRegistry } from '@/components/games/registry';
-import { getUnit, units, type GameId, type Unit } from '@/data/units';
+import { gameHasContent, getUnit, units, type GameId, type Unit } from '@/data/units';
 import { useHashRoute } from '@/lib/router';
+import { useTeacherMode } from '@/lib/teacher';
 import { THEME } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 /** A length that scales with the visible height (so the unit screen fits short laptop screens). */
-const vh = (min: number, k: number, max: number) => `clamp(${min}px, calc(var(--app-h, 100dvh) * ${k}), ${max}px)`;
+const vh = (min: number, k: number, max: number, room = 0) =>
+  `clamp(${min}px, calc(${room ? `(var(--app-h, 100dvh) - ${room}px)` : 'var(--app-h, 100dvh)'} * ${k}), ${max}px)`;
+const STORY_ROOM = 28;
 
 /** Card press effect: lift on hover (mouse only), push down with a smaller shadow, keyboard focus ring. */
 const PRESSABLE = cn(
@@ -18,9 +23,20 @@ const PRESSABLE = cn(
   'focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-ink',
 );
 
+/** Grid span for a game card: an odd last card is wide; five games sit 3 + 2 on wide screens. */
+function spanClass(count: number, index: number): string {
+  if (count !== 5) return 'min-[560px]:odd:last:col-span-2';
+  if (index < 3) return 'min-[900px]:col-span-2';
+  return index === 4 ? 'min-[560px]:col-span-2 min-[900px]:col-span-3' : 'min-[900px]:col-span-3';
+}
+
 export default function App() {
-  const { route, go, leave } = useHashRoute();
-  const unit = route.unitId ? getUnit(route.unitId) : undefined;
+  const { route, go, leave, toHome } = useHashRoute();
+  const teacher = useTeacherMode();
+  // A teacher-only unit (also by link) stays closed until teacher mode is unlocked.
+  const linked = route.unitId ? getUnit(route.unitId) : undefined;
+  const locked = linked?.teacherOnly === true && !teacher;
+  const unit = locked ? undefined : linked;
   const gameOpen = unit !== undefined && route.gameId !== null;
 
   // Lock page scroll (incl. iOS rubber-banding) while a game is open.
@@ -29,6 +45,10 @@ export default function App() {
     document.documentElement.classList.add('scroll-locked');
     return () => document.documentElement.classList.remove('scroll-locked');
   }, [gameOpen]);
+
+  useEffect(() => {
+    if (locked) toHome();
+  }, [locked, toHome]);
 
   // Each screen starts at the top.
   useEffect(() => {
@@ -98,6 +118,7 @@ const LOGO = [
 ];
 
 function HomeScreen({ onPick }: { onPick: (unitId: string) => void }) {
+  const teacher = useTeacherMode();
   return (
     <main className="min-h-app mx-auto max-w-[1160px] px-6 pb-12 pt-6">
       <header className="flex flex-col items-center gap-1.5 pb-9 pt-6 text-center">
@@ -113,7 +134,7 @@ function HomeScreen({ onPick }: { onPick: (unitId: string) => void }) {
       </header>
 
       <section aria-label="الوَحَدَاتُ" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-7">
-        {units.map((unit) => (
+        {units.filter((unit) => teacher || !unit.teacherOnly).map((unit) => (
           <button
             key={unit.id}
             type="button"
@@ -136,6 +157,7 @@ function HomeScreen({ onPick }: { onPick: (unitId: string) => void }) {
       </section>
 
       <Credits />
+      <TeacherLock />
     </main>
   );
 }
@@ -170,6 +192,12 @@ function Credits() {
 
 function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; onPlay: (id: GameId) => void }) {
   const theme = THEME[unit.theme];
+  // The story line takes height from a screen that already just fits, so the sizes below scale from a
+  // visible height that many px shorter and the cards give it back.
+  const room = unit.story ? STORY_ROOM : 0;
+  // Five games take three rows on a tall narrow screen, so their largest sizes are a little smaller.
+  const cap = unit.games.length === 5 ? 0.7 : 1;
+  const v = (min: number, k: number, max: number) => vh(min, k, Math.max(min, Math.round(max * cap)), room);
   return (
     <main data-unit-screen={unit.id} className="min-h-app mx-auto flex max-w-[1160px] flex-col px-4 pb-4 pt-3 sm:px-6">
       <header className={cn('mb-4 flex shrink-0 items-center gap-[18px] rounded-card-lg px-4 py-2.5 shadow-card', theme.bg)}>
@@ -183,9 +211,14 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
         </button>
         <div className="flex min-w-0 flex-1 flex-col items-start">
           <Badge unit={unit} />
-          <h1 className="text-vowelled" style={{ fontSize: vh(22, 0.04, 34) }}>
+          <h1 className="text-vowelled" style={{ fontSize: v(22, 0.04, 34) }}>
             {unit.title}
           </h1>
+          {unit.story && (
+            <p data-unit-story className={cn('text-vowelled opacity-80', theme.ink)} style={{ fontSize: v(15, 0.026, 20) }}>
+              {unit.story}
+            </p>
+          )}
         </div>
         <span className="hidden min-[560px]:block">
           <LetterTiles unit={unit} className="w-[72px] rounded-[18px] text-[46px]" />
@@ -194,39 +227,56 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
 
       <section
         aria-label="الأَلْعَابُ"
-        className="grid flex-1 auto-rows-[minmax(220px,auto)] grid-cols-1 gap-4 min-[560px]:auto-rows-[minmax(0,1fr)] min-[560px]:grid-cols-2"
+        className={cn(
+          'grid flex-1 auto-rows-[minmax(220px,auto)] grid-cols-1 gap-4 min-[560px]:auto-rows-[minmax(0,1fr)] min-[560px]:grid-cols-2',
+          // Five games: 3 + 2 on wide screens (two rows, so it still fits a laptop), the last one wide below that.
+          unit.games.length === 5 && 'min-[900px]:grid-cols-6',
+        )}
       >
-        {unit.games.map((game) => {
+        {unit.games.map((game, index) => {
           // Each card is filled with its game's own color; the emoji circle and pill are white.
           const t = THEME[game.theme];
+          // A game with no content yet is a soft, unopenable "coming soon" card.
+          const soon = !gameHasContent(unit, game.id);
           return (
             <button
               key={game.id}
               type="button"
               data-game-card={game.id}
+              data-soon={soon}
+              disabled={soon}
               onClick={() => onPlay(game.id)}
-              className={cn(PRESSABLE, 'flex min-h-0 flex-col items-center justify-center rounded-card-lg border-4 border-white/60 px-[18px] text-center', t.bg)}
-              style={{ gap: vh(4, 0.012, 10), paddingBlock: vh(8, 0.025, 22) }}
+              className={cn(
+                soon ? 'game-piece cursor-default opacity-60' : PRESSABLE,
+                'flex min-h-0 flex-col items-center justify-center rounded-card-lg border-4 border-white/60 px-[18px] text-center',
+                spanClass(unit.games.length, index),
+                t.bg,
+              )}
+              style={{ gap: v(4, 0.012, 10), paddingBlock: v(8, 0.025, 22) }}
             >
-              <span
-                aria-hidden
-                className="flex aspect-square shrink-0 items-center justify-center rounded-full bg-white/80"
-                style={{ width: vh(52, 0.09, 112) }}
-              >
-                {/* Plays once on load, then stays static. */}
-                <EmojiArt emoji={game.emoji} size={vh(30, 0.052, 64)} play />
-              </span>
-              <span className="text-vowelled" style={{ fontSize: vh(20, 0.036, 26) }}>
+              {game.id === 'fill-blank' && !soon ? (
+                <FillBlankPreview unit={unit} height={v(52, 0.09, 112)} />
+              ) : (
+                <span
+                  aria-hidden
+                  className="flex aspect-square shrink-0 items-center justify-center rounded-full bg-white/80"
+                  style={{ width: v(52, 0.09, 112) }}
+                >
+                  {/* Plays once on load, then stays static. */}
+                  <EmojiArt emoji={game.emoji} size={v(30, 0.052, 64)} play={!soon} />
+                </span>
+              )}
+              <span className="text-vowelled" style={{ fontSize: v(20, 0.036, 26) }}>
                 {game.title}
               </span>
-              <span className={cn('text-vowelled opacity-80', t.ink)} style={{ fontSize: vh(15, 0.026, 19), lineHeight: 1.8 }}>
+              <span className={cn('text-vowelled opacity-80', t.ink)} style={{ fontSize: v(15, 0.026, 19), lineHeight: 1.8 }}>
                 {game.short}
               </span>
               <span
                 className={cn('inline-flex items-center rounded-full bg-white px-[26px] text-vowelled', t.ink)}
-                style={{ minHeight: vh(40, 0.07, 52), fontSize: vh(18, 0.032, 22) }}
+                style={{ minHeight: v(40, 0.07, 52), fontSize: v(18, 0.032, 22) }}
               >
-                أَلْعَبُ ◀
+                {soon ? 'قَرِيبًا' : 'أَلْعَبُ ◀'}
               </span>
             </button>
           );

@@ -94,6 +94,7 @@ export default function SentencePictureGame({ unitId, onExit }: GameProps) {
     <Session
       key={sessionKey}
       items={unit.sentencePictures}
+      inOrder={unit.inOrder}
       title={game.title}
       instruction={game.instruction}
       onRestart={() => setSessionKey((k) => k + 1)}
@@ -104,6 +105,7 @@ export default function SentencePictureGame({ unitId, onExit }: GameProps) {
 
 interface SessionProps {
   items: SentencePictureItem[];
+  inOrder?: boolean;
   title: string;
   instruction: string;
   onRestart: () => void;
@@ -115,11 +117,11 @@ interface Point {
   y: number;
 }
 
-function Session({ items, title, instruction, onRestart, onExit }: SessionProps) {
+function Session({ items, inOrder, title, instruction, onRestart, onExit }: SessionProps) {
   // Sentences and pictures are shuffled independently; deranging the sentence order guarantees no
-  // row holds a matching pair.
+  // row holds a matching pair. A unit that keeps its sentences in order still shuffles the pictures.
   const [order] = useState(() => {
-    const sentences = shuffle(items);
+    const sentences = inOrder ? [...items] : shuffle(items);
     return { sentences, pictures: derange(sentences) };
   });
   const [matched, setMatched] = useState<readonly string[]>([]);
