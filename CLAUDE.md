@@ -66,6 +66,7 @@ Fonts (self-hosted via @fontsource, Arabic subset only): Noto Naskh Arabic 700 f
 - Every game randomizes its content order on every open and every replay. Answer options never line up with their targets or match the correct order. Use src/lib/shuffle.ts. Games 2–4 follow this too: Game 2 shuffles sentences and pictures independently with no row aligned with its match; Game 3 shuffles the word order and the 4 choice tiles per word; Game 4 shuffles set order, and its tiles are never in the correct order.
 - Exception: fill-blank keeps the worksheet's order for sentences and cloud words. Units with `inOrder: true` (Unit 2) also list the sentences of Games 2 and 4 in textbook order; their pictures (Game 2, still no row aligned with its match) and word tiles (Game 4, never in the right order) still shuffle.
 
+- Teacher-only units: the code is never written in the repo (only a salted hash in `src/lib/teacher.ts`; change it with `scripts/teacher-code-hash.mjs`). `npm run test:e2e` reads it from `TEACHER_CODE` or the git-ignored `.env.local`.
 - Before finishing any task, run `npm run build`, `npx tsc --noEmit`, and `npx vitest run`.
 
 ## Images

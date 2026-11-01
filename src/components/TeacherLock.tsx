@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Dialog, DialogCard, DialogTitle } from '@/components/ui/dialog';
 import { useTimers } from '@/hooks/useTimers';
-import { lockTeacher, unlockTeacher, useTeacherMode } from '@/lib/teacher';
+import { CODE_LENGTH, lockTeacher, unlockTeacher, useTeacherMode } from '@/lib/teacher';
 import { cn } from '@/lib/utils';
 
-const CODE_LENGTH = 6;
 const KEY = 'game-piece flex h-14 w-full items-center justify-center rounded-card-md bg-white font-sans text-[28px] font-bold leading-none text-ink shadow-card transition-[transform,box-shadow] duration-150 active:translate-y-[3px] active:shadow-card-pressed focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-ink';
 
 function Lock({ open }: { open: boolean }) {
@@ -50,13 +49,18 @@ export function TeacherLock() {
 function CodePad({ onDone }: { onDone: () => void }) {
   const [code, setCode] = useState('');
   const [wrong, setWrong] = useState(false);
+  const [checking, setChecking] = useState(false);
   const later = useTimers();
+  const busy = wrong || checking;
 
-  const enter = (next: string) => {
-    if (wrong) return;
+  const enter = async (next: string) => {
+    if (busy) return;
     setCode(next);
     if (next.length < CODE_LENGTH) return;
-    if (unlockTeacher(next)) return onDone();
+    setChecking(true);
+    const ok = await unlockTeacher(next);
+    setChecking(false);
+    if (ok) return onDone();
     setWrong(true);
     later(() => {
       setWrong(false);
@@ -64,7 +68,7 @@ function CodePad({ onDone }: { onDone: () => void }) {
     }, 600);
   };
   const press = (digit: string) => code.length < CODE_LENGTH && enter(code + digit);
-  const erase = () => !wrong && setCode(code.slice(0, -1));
+  const erase = () => !busy && setCode(code.slice(0, -1));
 
   return (
     <div

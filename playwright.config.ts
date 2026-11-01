@@ -2,6 +2,13 @@ import { defineConfig } from '@playwright/test';
 
 const PORT = 4300;
 
+// The teacher code for the e2e tests is not in the repo: it comes from TEACHER_CODE or the git-ignored .env.local.
+try {
+  process.loadEnvFile('.env.local');
+} catch {
+  /* no .env.local: TEACHER_CODE must be in the environment */
+}
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 90_000,

@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { getUnit, letterFormItems } from '../src/data/units';
 import { formName } from '../src/lib/arabicJoining';
 import { VIEWPORTS, expectFits } from './fit';
-import { gotoAsTeacher } from './teacher';
+import { TEACHER_CODE, gotoAsTeacher } from './teacher';
 
 
 const UNIT = getUnit('unit-2')!;
@@ -195,13 +195,13 @@ test.describe('unit 2 shell @chromium', () => {
 
     // A wrong code shakes the dots, clears, and unlocks nothing.
     await page.locator('[data-teacher-lock]').click();
-    for (const d of '123450') await page.getByRole('button', { name: d, exact: true }).click();
+    for (const d of '12345670') await page.getByRole('button', { name: d, exact: true }).click();
     await expect(page.locator('[data-code-dots]')).toHaveAttribute('data-wrong', 'true');
     await expect(page.locator('[data-code-dots]')).toHaveAttribute('data-wrong', 'false');
     await expect(page.locator('[data-unit-card]')).toHaveCount(1);
 
     // The right code (typed on the keyboard) closes the popup and reveals the unit.
-    await page.keyboard.type('123456');
+    await page.keyboard.type(TEACHER_CODE);
     await expect(page.locator('[data-code-dots]')).toHaveCount(0);
     await expect(page.locator('[data-unit-card]')).toHaveCount(2);
 
