@@ -84,5 +84,11 @@ export function useHashRoute() {
     }
   }, []);
 
-  return { route, go, leave };
+  /** Replaces the current entry with home (a link to something the visitor may not open). */
+  const toHome = useCallback(() => {
+    history.replaceState(null, '', hashFor(HOME));
+    setRoute(HOME);
+  }, []);
+
+  return { route, go, leave, toHome };
 }

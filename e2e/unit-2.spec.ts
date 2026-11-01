@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { getUnit, letterFormItems } from '../src/data/units';
 import { formName } from '../src/lib/arabicJoining';
 import { VIEWPORTS, expectFits } from './fit';
+import { gotoAsTeacher } from './teacher';
 
 
 const UNIT = getUnit('unit-2')!;
@@ -89,7 +90,7 @@ const expectSaw = (page: Page, flag: string, id: string) => expect.poll(() => sa
 const SENTENCE_PICTURES = UNIT.sentencePictures;
 
 async function openSentencePicture(page: Page) {
-  await page.goto('/#/unit/unit-2/sentence-picture');
+  await gotoAsTeacher(page, '#/unit/unit-2/sentence-picture');
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator('[data-row]')).toHaveCount(SENTENCE_PICTURES.length);
 }
@@ -126,7 +127,7 @@ async function playUnscramble(page: Page, onState: (state: string) => Promise<vo
 }
 
 async function openFill(page: Page) {
-  await page.goto('/#/unit/unit-2/fill-blank');
+  await gotoAsTeacher(page, '#/unit/unit-2/fill-blank');
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator('[data-sentence]')).toHaveCount(4);
   await expect(page.locator('[data-tile]')).toHaveCount(FILL.words.length);
@@ -187,8 +188,37 @@ async function expectContained(page: Page, state: string) {
 test.describe('unit 2 shell @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
-  test('home shows 2 unit cards; Unit 2 shows its story and its 5 playable game cards', async ({ page }) => {
+  test('Unit 2 is teacher-only: hidden on home and by link until the code is entered', async ({ page }) => {
     await page.goto('/');
+    await expect(page.locator('[data-unit-card]')).toHaveCount(1);
+    await expect(page.locator('[data-unit-card="unit-2"]')).toHaveCount(0);
+
+    // A wrong code shakes the dots, clears, and unlocks nothing.
+    await page.locator('[data-teacher-lock]').click();
+    for (const d of '123450') await page.getByRole('button', { name: d, exact: true }).click();
+    await expect(page.locator('[data-code-dots]')).toHaveAttribute('data-wrong', 'true');
+    await expect(page.locator('[data-code-dots]')).toHaveAttribute('data-wrong', 'false');
+    await expect(page.locator('[data-unit-card]')).toHaveCount(1);
+
+    // The right code (typed on the keyboard) closes the popup and reveals the unit.
+    await page.keyboard.type('123456');
+    await expect(page.locator('[data-code-dots]')).toHaveCount(0);
+    await expect(page.locator('[data-unit-card]')).toHaveCount(2);
+
+    // The same button locks it again.
+    await page.locator('[data-teacher-lock="unlocked"]').click();
+    await expect(page.locator('[data-unit-card]')).toHaveCount(1);
+
+    // A direct link to a teacher-only unit or game lands on home.
+    for (const hash of ['#/unit/unit-2', '#/unit/unit-2/unscramble']) {
+      await page.evaluate((h) => { location.hash = h; }, hash);
+      await expect(page).toHaveURL(/#\/$/);
+      await expect(page.locator('[data-unit-card]')).toHaveCount(1);
+    }
+  });
+
+  test('home shows 2 unit cards once unlocked; Unit 2 shows its story and its 5 playable game cards', async ({ page }) => {
+    await gotoAsTeacher(page);
     await expect(page.locator('[data-unit-card]')).toHaveCount(2);
     await page.locator('[data-unit-card="unit-2"]').click();
     await expect(page).toHaveURL(/#\/unit\/unit-2$/);
@@ -211,13 +241,13 @@ test.describe('unit 2 shell @chromium', () => {
   });
 
   test('a deep link to an unknown game goes home', async ({ page }) => {
-    await page.goto('/#/unit/unit-2/no-such-game');
+    await gotoAsTeacher(page, '#/unit/unit-2/no-such-game');
     await expect(page).toHaveURL(/#\/$/);
     await expect(page.locator('[data-unit-card]')).toHaveCount(2);
   });
 
   test('Unit 2 word-picture plays with its emoji pictures', async ({ page }) => {
-    await page.goto('/#/unit/unit-2/word-picture');
+    await gotoAsTeacher(page, '#/unit/unit-2/word-picture');
     const cards = page.locator('[data-card]');
     await expect(cards.first()).toBeVisible();
     const id = (await cards.first().getAttribute('data-card'))!;
@@ -282,7 +312,7 @@ for (const vp of VIEWPORTS.filter((v) => v.kind !== 'phone')) {
     });
 
     test('unscramble fits without scrolling in every state', async ({ page }) => {
-      await page.goto('/#/unit/unit-2/unscramble');
+      await gotoAsTeacher(page, '#/unit/unit-2/unscramble');
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator('[data-strip]')).toBeVisible();
       const seen = new Set<string>();
@@ -295,7 +325,7 @@ for (const vp of VIEWPORTS.filter((v) => v.kind !== 'phone')) {
     });
 
     test('the Unit 2 screen fits without scrolling', async ({ page }) => {
-      await page.goto('/#/unit/unit-2');
+      await gotoAsTeacher(page, '#/unit/unit-2');
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator('[data-game-card]')).toHaveCount(5);
       const m = await page.evaluate(() => {
@@ -402,7 +432,7 @@ test.describe('unit 2 sentence-picture @chromium', () => {
 
   test('the 4 story sentences and scenes match by drag; a wrong pair is refused; sentences keep the story order, pictures are shuffled so no row lines up', async ({ page }) => {
     // Open it from the unit screen, like a child would.
-    await page.goto('/#/unit/unit-2');
+    await gotoAsTeacher(page, '#/unit/unit-2');
     await page.locator('[data-game-card="sentence-picture"]').click();
     await expect(page.locator('[data-row]')).toHaveCount(SENTENCE_PICTURES.length);
 
@@ -434,7 +464,7 @@ test.describe('unit 2 unscramble @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
   test('opens from the 5th card; all 4 story sentences complete by drag, each with its scene', async ({ page }) => {
-    await page.goto('/#/unit/unit-2');
+    await gotoAsTeacher(page, '#/unit/unit-2');
     await page.locator('[data-game-card="unscramble"]').click();
     await expect(page.locator('#active-game-container[data-game="unscramble"]')).toBeVisible();
     await expect(page.locator('[data-picture]')).toBeVisible();
@@ -444,7 +474,7 @@ test.describe('unit 2 unscramble @chromium', () => {
   });
 
   test('a wrong word is refused at once; the tiles never start in the right order but do change between opens; the sentences stay in story order', async ({ page }) => {
-    await page.goto('/#/unit/unit-2/unscramble');
+    await gotoAsTeacher(page, '#/unit/unit-2/unscramble');
     await page.evaluate(() => document.fonts.ready);
     await recordFlags(page);
     const strip = page.locator('[data-strip]');
@@ -569,7 +599,7 @@ test.describe('unit 2 letter-forms @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
   test('the chooser shows س and ش; every ش word completes correctly', async ({ page }) => {
-    await page.goto('/#/unit/unit-2/letter-forms');
+    await gotoAsTeacher(page, '#/unit/unit-2/letter-forms');
     await page.evaluate(() => document.fonts.ready);
     await expect(page.locator('[data-letter-set]')).toHaveText([/س/, /ش/]);
     await page.locator('[data-letter-set="sheen"]').click();
@@ -603,7 +633,7 @@ test.describe('unit 2 letter-forms @chromium', () => {
   });
 
   test('the س set opens too', async ({ page }) => {
-    await page.goto('/#/unit/unit-2/letter-forms/seen');
+    await gotoAsTeacher(page, '#/unit/unit-2/letter-forms/seen');
     await expect(page.locator('[data-word]')).toBeVisible();
     await expect(page.locator('[data-tile]')).toHaveCount(4);
   });

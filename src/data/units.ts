@@ -70,6 +70,8 @@ export interface Unit {
   theme: Theme;
   /** The sentence games (matching, unscramble) list their sentences in the order written here; pictures and word tiles still shuffle. */
   inOrder?: boolean;
+  /** Hidden from the home screen (and its links) until the teacher unlocks teacher mode (src/lib/teacher.ts). */
+  teacherOnly?: boolean;
   games: GameDef[]; vocab: VocabWord[]; sentencePictures: SentencePictureItem[];
   letterForms: LetterFormSet[]; unscramble: UnscrambleSet[];
   fillBlank?: FillBlankData;
@@ -359,6 +361,7 @@ export const units: Unit[] = [
     letters: ['س', 'ش'],
     story: 'فِي البُسْتَانِ',
     inOrder: true,
+    teacherOnly: true,
     theme: 'mint',
     games: [
       {

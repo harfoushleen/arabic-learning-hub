@@ -1,11 +1,13 @@
 import { Suspense, useEffect, useState, type CSSProperties } from 'react';
 import { EmojiArt } from '@/components/EmojiArt';
 import { FillBlankPreview } from '@/components/FillBlankPreview';
+import { TeacherLock } from '@/components/TeacherLock';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { GameStage } from '@/components/games/GameStage';
 import { gameRegistry } from '@/components/games/registry';
 import { gameHasContent, getUnit, units, type GameId, type Unit } from '@/data/units';
 import { useHashRoute } from '@/lib/router';
+import { useTeacherMode } from '@/lib/teacher';
 import { THEME } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
@@ -29,8 +31,12 @@ function spanClass(count: number, index: number): string {
 }
 
 export default function App() {
-  const { route, go, leave } = useHashRoute();
-  const unit = route.unitId ? getUnit(route.unitId) : undefined;
+  const { route, go, leave, toHome } = useHashRoute();
+  const teacher = useTeacherMode();
+  // A teacher-only unit (also by link) stays closed until teacher mode is unlocked.
+  const linked = route.unitId ? getUnit(route.unitId) : undefined;
+  const locked = linked?.teacherOnly === true && !teacher;
+  const unit = locked ? undefined : linked;
   const gameOpen = unit !== undefined && route.gameId !== null;
 
   // Lock page scroll (incl. iOS rubber-banding) while a game is open.
@@ -39,6 +45,10 @@ export default function App() {
     document.documentElement.classList.add('scroll-locked');
     return () => document.documentElement.classList.remove('scroll-locked');
   }, [gameOpen]);
+
+  useEffect(() => {
+    if (locked) toHome();
+  }, [locked, toHome]);
 
   // Each screen starts at the top.
   useEffect(() => {
@@ -108,6 +118,7 @@ const LOGO = [
 ];
 
 function HomeScreen({ onPick }: { onPick: (unitId: string) => void }) {
+  const teacher = useTeacherMode();
   return (
     <main className="min-h-app mx-auto max-w-[1160px] px-6 pb-12 pt-6">
       <header className="flex flex-col items-center gap-1.5 pb-9 pt-6 text-center">
@@ -123,7 +134,7 @@ function HomeScreen({ onPick }: { onPick: (unitId: string) => void }) {
       </header>
 
       <section aria-label="الوَحَدَاتُ" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-7">
-        {units.map((unit) => (
+        {units.filter((unit) => teacher || !unit.teacherOnly).map((unit) => (
           <button
             key={unit.id}
             type="button"
@@ -146,6 +157,7 @@ function HomeScreen({ onPick }: { onPick: (unitId: string) => void }) {
       </section>
 
       <Credits />
+      <TeacherLock />
     </main>
   );
 }
