@@ -188,7 +188,8 @@ async function expectContained(page: Page, state: string) {
 test.describe('unit 2 shell @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
-  test('Unit 2 is teacher-only: hidden on home and by link until the code is entered', async ({ page }) => {
+  // Unit 2 is now public; re-enable (pointing at a unit flagged teacherOnly) when the next locked unit lands.
+  test.skip('Unit 2 is teacher-only: hidden on home and by link until the code is entered', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('[data-unit-card]')).toHaveCount(1);
     await expect(page.locator('[data-unit-card="unit-2"]')).toHaveCount(0);
@@ -217,7 +218,7 @@ test.describe('unit 2 shell @chromium', () => {
     }
   });
 
-  test('home shows 2 unit cards once unlocked; Unit 2 shows its story and its 5 playable game cards', async ({ page }) => {
+  test('home shows 2 unit cards; Unit 2 shows its story and its 5 playable game cards', async ({ page }) => {
     await gotoAsTeacher(page);
     await expect(page.locator('[data-unit-card]')).toHaveCount(2);
     await page.locator('[data-unit-card="unit-2"]').click();

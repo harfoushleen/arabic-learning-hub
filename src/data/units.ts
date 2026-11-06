@@ -361,7 +361,6 @@ export const units: Unit[] = [
     letters: ['س', 'ش'],
     story: 'فِي البُسْتَانِ',
     inOrder: true,
-    teacherOnly: true,
     theme: 'mint',
     games: [
       {
