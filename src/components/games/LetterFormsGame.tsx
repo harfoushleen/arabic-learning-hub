@@ -4,7 +4,7 @@ import { getUnit, type LetterFormItem, type LetterFormPart, type LetterFormSet }
 import { solveFitGrid, useFitGrid, type FitGridConfig, type FitGridLayout } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { useTimers } from '@/hooks/useTimers';
-import { formName, formsFor, TATWEEL, worksheetSegments, ZWJ, type FormName } from '@/lib/arabicJoining';
+import { formName, formsFor, TATWEEL, worksheetSegments, ZWJ } from '@/lib/arabicJoining';
 import { starsFor } from '@/lib/rounds';
 import { shuffle, shuffleAvoiding } from '@/lib/shuffle';
 import { textWidth } from '@/lib/textWidth';
@@ -14,12 +14,20 @@ import { DraggableTile } from './drag/DraggableTile';
 import { useDrag, type DropResult } from './drag/useDrag';
 import { GameFinal } from './GameFinal';
 import { GameStage } from './GameStage';
+import { LetterChooser } from './LetterChooser';
 import type { GameProps } from './types';
 
 // Tiles are identified by their form's name (initial/medial/final/isolated); answers are never
-// checked by comparing Arabic strings.
-type TileId = FormName;
-const tilesFor = (letter: string) => formsFor(letter).map((form) => ({ id: formName(form), form }));
+// checked by comparing Arabic strings. A set that mixes letters (ت + ة) prefixes the letter, so the two
+// isolated (and final) tiles stay apart; a one-letter set keeps the plain form names.
+type TileId = string;
+const tileId = (letter: string, form: string, mixed: boolean): TileId => (mixed ? `${letter}:${formName(form)}` : formName(form));
+const tilesFor = (letters: string[]) =>
+  letters.flatMap((letter) => formsFor(letter).map((form) => ({ id: tileId(letter, form, letters.length > 1), form })));
+
+// Noto Naskh draws a bare ه (U+0647) like ھ; the textbook's isolated ه is the closed circle, which is the
+// isolated presentation form U+FEE9. Tiles only: words and answers are still checked by form name.
+const tileGlyph = (form: string) => (form === 'ه' ? 'ﻩ' : form);
 
 const SHAKE_MS = 500;
 const WIGGLE_MS = 450;
@@ -94,47 +102,6 @@ export default function LetterFormsGame({ unitId, onExit, subId, onSub }: GamePr
   );
 }
 
-/** Big letter tiles, one per set (built from the data, so a new letter appears by itself). */
-function LetterChooser({
-  sets,
-  title,
-  instruction,
-  onPick,
-  onExit,
-}: {
-  sets: LetterFormSet[];
-  title: string;
-  instruction: string;
-  onPick: (setId: string) => void;
-  onExit?: () => void;
-}) {
-  return (
-    <GameStage title={title} instruction={instruction} onClose={onExit}>
-      <div className="flex h-full flex-wrap content-center items-center justify-center gap-[clamp(16px,4vw,48px)] p-2">
-        {sets.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            data-letter-set={s.id}
-            onClick={() => onPick(s.id)}
-            className="game-piece flex flex-col items-center justify-center gap-2 rounded-card-lg bg-white px-6 pb-4 pt-6 shadow-card transition-transform active:translate-y-[3px] active:shadow-card-pressed focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-ink"
-            style={{ width: 'clamp(150px, calc(var(--app-h, 100dvh) * 0.34), 280px)' }}
-          >
-            {/* A fixed-height box, so letters with a tail (ز) don't push their name lower than others. */}
-            <span
-              className="flex items-center justify-center font-naskh font-bold leading-none text-sky-ink"
-              style={{ fontSize: 'clamp(80px, calc(var(--app-h, 100dvh) * 0.18), 160px)', height: '1.25em' }}
-            >
-              {s.letter}
-            </span>
-            <span className="text-vowelled text-[clamp(22px,calc(var(--app-h,100dvh)*0.04),32px)]">{s.name}</span>
-          </button>
-        ))}
-      </div>
-    </GameStage>
-  );
-}
-
 type Phase = 'playing' | 'holding' | 'word-done' | 'finished';
 
 interface SessionProps {
@@ -150,13 +117,12 @@ interface SessionProps {
 function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }: SessionProps) {
   const items = set.items;
   const instruction = set.instruction;
-  const [tiles] = useState(() => tilesFor(set.letter));
+  const [tiles] = useState(() => tilesFor([set.letter, ...(set.alsoLetters ?? [])]));
   // Fresh word order on every open; a replay never repeats the previous order.
   const [words] = useState(() => {
     const previous = previousOrder?.map((id) => items.find((it) => it.id === id)!);
     return previous ? shuffleAvoiding(items, previous) : shuffle(items);
   });
-  const [tileOrders] = useState(() => words.map(() => shuffle(tiles)));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('playing');
   const [filled, setFilled] = useState<(string | null)[]>(() => words[0]!.parts.map(() => null));
@@ -238,7 +204,7 @@ function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }
 
   function dropTile(id: TileId): DropResult {
     const blank = item.parts[activeBlank] as Extract<LetterFormPart, { type: 'blank' }>;
-    const correct = formName(blank.answer);
+    const correct = tileId(blank.answer.replaceAll(TATWEEL, ''), blank.answer, !!set.alsoLetters?.length);
 
     if (id === correct) {
       const next = [...filled];
@@ -350,7 +316,7 @@ function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }
                 </BigButton>
               </div>
             ) : (
-              tileOrders[index]!.map((tile) => (
+              tiles.map((tile) => (
                 <DraggableTile
                   key={tile.id}
                   id={tile.id}
@@ -369,7 +335,7 @@ function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }
                     wiggleTile === tile.id && 'animate-wiggle',
                   )}
                 >
-                  {tile.form}
+                  {tileGlyph(tile.form)}
                 </DraggableTile>
               ))
             )}

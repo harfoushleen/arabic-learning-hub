@@ -1,5 +1,5 @@
 // Downloads Noto emoji art for every emoji used in src/data/units.ts (vocab, letter-forms words and
-// game cards) into public/emoji/, so the app works offline and never hotlinks.
+// game cards, choose options) into public/emoji/, so the app works offline and never hotlinks.
 //
 //   <codepoints>.svg   static Noto Emoji (Apache 2.0)         github.com/googlefonts/noto-emoji (2D/svg)
 //   <codepoints>.json  Noto Animated Emoji Lottie (CC BY 4.0) googlefonts.github.io/noto-emoji-animation
@@ -28,6 +28,8 @@ for (const unit of units) {
   for (const w of unit.vocab) add(w.emoji, w.text);
   for (const f of unit.letterForms.flatMap((set) => set.items)) add(f.emoji, f.target);
   for (const g of unit.games) add(g.emoji, g.title);
+  for (const o of (unit.choose ?? []).flatMap((q) => q.options)) if (o.emoji) add(o.emoji, o.text);
+  for (const q of [...(unit.choose ?? []), ...(unit.demonstratives ?? [])]) if (q.emoji) add(q.emoji, q.stem ?? q.question);
 }
 
 async function fetchOk(url) {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { gameHasContent, getUnit, type GameId } from '@/data/units';
 
 // Hash routes: #/ (home), #/unit/<unitId> (unit screen), #/unit/<unitId>/<gameId> (game dialog),
-// #/unit/<unitId>/<gameId>/<subId> (a game's own sub-screen: Game 3's chosen letter set).
+// #/unit/<unitId>/<gameId>/<subId> (a game's own sub-screen: Game 1's or Game 3's chosen letter set).
 export interface Route {
   unitId: string | null;
   gameId: GameId | null;
@@ -22,8 +22,9 @@ export function parseHash(hash: string): Route | null {
   const game = unit.games.find((g) => g.id === decodeURIComponent(parts[2]!));
   if (!game || !gameHasContent(unit, game.id)) return null;
   if (parts.length === 3) return { unitId: unit.id, gameId: game.id };
-  // Only Game 3 has sub-screens: one per letter set.
-  const set = game.id === 'letter-forms' ? unit.letterForms.find((s) => s.id === decodeURIComponent(parts[3]!)) : undefined;
+  // Games 1 and 3 have sub-screens: one per letter set.
+  const subs = game.id === 'letter-forms' ? unit.letterForms : game.id === 'word-picture' ? (unit.wordSets ?? []) : [];
+  const set = subs.find((s) => s.id === decodeURIComponent(parts[3]!));
   return set ? { unitId: unit.id, gameId: game.id, subId: set.id } : null;
 }
 

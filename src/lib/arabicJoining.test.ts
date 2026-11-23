@@ -57,7 +57,7 @@ describe('letterForms data', () => {
           expect(partBases).toHaveLength(1);
           const prev = bases[index - 1] ?? null;
           const next = bases[index + 1] ?? null;
-          expect(part.answer).toBe(expectedForm(setOf(item.id).letter, prev, next));
+          expect(part.answer).toBe(expectedForm(partBases[0]!, prev, next));
         }
         index += partBases.length;
       }
@@ -118,6 +118,38 @@ describe('letterFormItem', () => {
   });
 });
 
+describe('Unit 3 ت set', () => {
+  const set = units.find((u) => u.id === 'unit-3')!.letterForms.find((s) => s.id === 'ta')!;
+
+  it('expectedForm gives the worksheet answer for every word', () => {
+    expect(set.items.map((item) => [item.id, item.parts.filter((p) => p.type === 'blank').map((p) => p.answer)])).toEqual([
+      ['farasha', ['ـة']],
+      ['namat', ['ـت']],
+      ['turab', ['تـ']],
+      ['hut', ['ت']],
+      ['warda', ['ة']],
+      ['kataba', ['ـتـ']],
+    ]);
+  });
+
+  it('offers the 6 tiles تـ ـتـ ـت ت ة ـة', () => {
+    expect([set.letter, ...set.alsoLetters!].flatMap(formsFor)).toEqual(['تـ', 'ـتـ', 'ـت', 'ت', 'ة', 'ـة']);
+  });
+});
+
+describe('Unit 3 ه set', () => {
+  it('expectedForm gives the worksheet answer for every word', () => {
+    const set = units.find((u) => u.id === 'unit-3')!.letterForms.find((s) => s.id === 'ha')!;
+    expect(set.items.map((item) => [item.id, item.parts.filter((p) => p.type === 'blank').map((p) => p.answer)])).toEqual([
+      ['muharrij', ['ـهـ']],
+      ['fawakih', ['ـه']],
+      ['zuhur', ['هـ']],
+      ['wujuh', ['ه']],
+      ['hadaf', ['هـ']],
+    ]);
+  });
+});
+
 describe('formsFor / formName', () => {
   it('gives a dual-joining letter 4 forms and a non-forward-joiner 2', () => {
     expect(formsFor('ب')).toEqual(['بـ', 'ـبـ', 'ـب', 'ب']);
@@ -136,7 +168,7 @@ describe('formsFor / formName', () => {
   it('every answer is one of its letter tiles', () => {
     for (const set of units.flatMap((u) => u.letterForms)) {
       for (const item of set.items) {
-        for (const part of item.parts) if (part.type === 'blank') expect(formsFor(set.letter)).toContain(part.answer);
+        for (const part of item.parts) if (part.type === 'blank') expect([set.letter, ...(set.alsoLetters ?? [])].flatMap(formsFor)).toContain(part.answer);
       }
     }
   });

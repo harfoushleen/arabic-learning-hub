@@ -14,6 +14,7 @@ import { DraggableTile } from './drag/DraggableTile';
 import { useDrag, type DropResult } from './drag/useDrag';
 import { GameFinal } from './GameFinal';
 import { GameStage } from './GameStage';
+import { LetterChooser } from './LetterChooser';
 import type { GameProps } from './types';
 
 const PASTELS = ['bg-pastel-blue', 'bg-pastel-pink', 'bg-pastel-mint', 'bg-pastel-yellow', 'bg-pastel-lilac', 'bg-pastel-peach'];
@@ -67,7 +68,7 @@ function bankHeight(words: readonly VocabWord[], m: CardMetrics, areaWidth: numb
   return rows * m.slotH + (rows - 1) * BANK_GAP;
 }
 
-export default function WordPictureGame({ unitId, onExit }: GameProps) {
+export default function WordPictureGame({ unitId, onExit, subId, onSub }: GameProps) {
   const [sessionKey, setSessionKey] = useState(0);
   const unit = getUnit(unitId);
   const game = unit?.games.find((g) => g.id === 'word-picture');
@@ -79,13 +80,21 @@ export default function WordPictureGame({ unitId, onExit }: GameProps) {
       </GameStage>
     );
   }
+  // A unit with word sets (Unit 3: ت / ه) starts with the letter chooser and plays one set at a time.
+  const sets = unit.wordSets ?? [];
+  const set = sets.find((s) => s.id === subId);
+  if (sets.length > 0 && !set) {
+    return <LetterChooser sets={sets} title={game.title} instruction={game.instruction} onPick={(id) => onSub?.(id)} onExit={onExit} />;
+  }
+  const words = set ? set.wordIds.map((id) => unit.vocab.find((w) => w.id === id)!) : unit.vocab;
   return (
     <Session
-      key={sessionKey}
-      words={unit.vocab}
+      key={`${set?.id ?? ''}:${sessionKey}`}
+      words={words}
       title={game.title}
       instruction={game.instruction}
       onRestart={() => setSessionKey((k) => k + 1)}
+      onOtherLetter={set ? () => onSub?.(null) : undefined}
       onExit={onExit}
     />
   );
@@ -103,10 +112,12 @@ interface SessionProps {
   title: string;
   instruction: string;
   onRestart: () => void;
+  /** Back to the letter chooser (only when the unit has word sets). */
+  onOtherLetter?: () => void;
   onExit?: () => void;
 }
 
-function Session({ words, title, instruction, onRestart, onExit }: SessionProps) {
+function Session({ words, title, instruction, onRestart, onOtherLetter, onExit }: SessionProps) {
   // Fresh order on every open and every replay (the session remounts). The bank is deranged
   // so no chip sits in the same position as its picture.
   const [rounds] = useState<Round[]>(() =>
@@ -235,7 +246,14 @@ function Session({ words, title, instruction, onRestart, onExit }: SessionProps)
   let overlay = null;
   if (finished) {
     const stars = starsFor(words.length - Object.keys(misses).length, words.length);
-    overlay = <GameFinal stars={stars} onRestart={onRestart} onExit={onExit} />;
+    overlay = (
+      <GameFinal
+        stars={stars}
+        onRestart={onRestart}
+        onExit={onExit}
+        extra={onOtherLetter && { label: 'حَرْفٌ آخَرُ', onClick: onOtherLetter }}
+      />
+    );
   } else if (phase === 'round-complete') {
     overlay = (
       <div className="flex animate-rise-in flex-col items-center gap-[clamp(12px,calc(var(--app-h,100dvh)*0.04),32px)] rounded-[2rem] bg-white px-10 py-[clamp(12px,calc(var(--app-h,100dvh)*0.04),40px)] shadow-xl">

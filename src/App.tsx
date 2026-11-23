@@ -25,6 +25,11 @@ const PRESSABLE = cn(
 
 /** Grid span for a game card: an odd last card is wide; five games sit 3 + 2 on wide screens. */
 function spanClass(count: number, index: number): string {
+  // Seven games on a twelve-column grid: 3 + 3 + 1 (wide) below 900px, 4 + 3 above.
+  if (count === 7) {
+    if (index < 4) return 'min-[560px]:col-span-4 min-[900px]:col-span-3';
+    return index === 6 ? 'min-[560px]:col-span-12 min-[900px]:col-span-4' : 'min-[560px]:col-span-4';
+  }
   if (count !== 5) return 'min-[560px]:odd:last:col-span-2';
   if (index < 3) return 'min-[900px]:col-span-2';
   return index === 4 ? 'min-[560px]:col-span-2 min-[900px]:col-span-3' : 'min-[900px]:col-span-3';
@@ -195,8 +200,8 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
   // The story line takes height from a screen that already just fits, so the sizes below scale from a
   // visible height that many px shorter and the cards give it back.
   const room = unit.story ? STORY_ROOM : 0;
-  // Five games take three rows on a tall narrow screen, so their largest sizes are a little smaller.
-  const cap = unit.games.length === 5 ? 0.7 : 1;
+  // Five or six games take three rows on a tall narrow screen, so their largest sizes are a little smaller.
+  const cap = unit.games.length >= 5 ? 0.7 : 1;
   const v = (min: number, k: number, max: number) => vh(min, k, Math.max(min, Math.round(max * cap)), room);
   return (
     <main data-unit-screen={unit.id} className="min-h-app mx-auto flex max-w-[1160px] flex-col px-4 pb-4 pt-3 sm:px-6">
@@ -231,6 +236,9 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
           'grid flex-1 auto-rows-[minmax(220px,auto)] grid-cols-1 gap-4 min-[560px]:auto-rows-[minmax(0,1fr)] min-[560px]:grid-cols-2',
           // Five games: 3 + 2 on wide screens (two rows, so it still fits a laptop), the last one wide below that.
           unit.games.length === 5 && 'min-[900px]:grid-cols-6',
+          // Six games: 3 + 3 on wide screens.
+          unit.games.length === 6 && 'min-[900px]:grid-cols-3',
+          unit.games.length === 7 && 'min-[560px]:grid-cols-12',
         )}
       >
         {unit.games.map((game, index) => {
@@ -312,7 +320,7 @@ function GameDialog({
         }
       >
         <div id="active-game-container" data-game={gameId} data-unit={unit.id}>
-          <Game unitId={unit.id} onExit={onClose} subId={subId} onSub={onSub} />
+          <Game unitId={unit.id} gameId={gameId} onExit={onClose} subId={subId} onSub={onSub} />
         </div>
       </Suspense>
     </DialogContent>
