@@ -4,7 +4,7 @@ import { getUnit, type LetterFormItem, type LetterFormPart, type LetterFormSet }
 import { solveFitGrid, useFitGrid, type FitGridConfig, type FitGridLayout } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { useTimers } from '@/hooks/useTimers';
-import { formName, formsFor, TATWEEL, worksheetSegments, ZWJ, type FormName } from '@/lib/arabicJoining';
+import { formName, formsFor, TATWEEL, worksheetSegments, ZWJ } from '@/lib/arabicJoining';
 import { starsFor } from '@/lib/rounds';
 import { shuffle, shuffleAvoiding } from '@/lib/shuffle';
 import { textWidth } from '@/lib/textWidth';
@@ -18,9 +18,12 @@ import { LetterChooser } from './LetterChooser';
 import type { GameProps } from './types';
 
 // Tiles are identified by their form's name (initial/medial/final/isolated); answers are never
-// checked by comparing Arabic strings.
-type TileId = FormName;
-const tilesFor = (letter: string) => formsFor(letter).map((form) => ({ id: formName(form), form }));
+// checked by comparing Arabic strings. A set that mixes letters (ت + ة) prefixes the letter, so the two
+// isolated (and final) tiles stay apart; a one-letter set keeps the plain form names.
+type TileId = string;
+const tileId = (letter: string, form: string, mixed: boolean): TileId => (mixed ? `${letter}:${formName(form)}` : formName(form));
+const tilesFor = (letters: string[]) =>
+  letters.flatMap((letter) => formsFor(letter).map((form) => ({ id: tileId(letter, form, letters.length > 1), form })));
 
 // Noto Naskh draws a bare ه (U+0647) like ھ; the textbook's isolated ه is the closed circle, which is the
 // isolated presentation form U+FEE9. Tiles only: words and answers are still checked by form name.
@@ -114,7 +117,7 @@ interface SessionProps {
 function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }: SessionProps) {
   const items = set.items;
   const instruction = set.instruction;
-  const [tiles] = useState(() => tilesFor(set.letter));
+  const [tiles] = useState(() => tilesFor([set.letter, ...(set.alsoLetters ?? [])]));
   // Fresh word order on every open; a replay never repeats the previous order.
   const [words] = useState(() => {
     const previous = previousOrder?.map((id) => items.find((it) => it.id === id)!);
@@ -201,7 +204,7 @@ function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }
 
   function dropTile(id: TileId): DropResult {
     const blank = item.parts[activeBlank] as Extract<LetterFormPart, { type: 'blank' }>;
-    const correct = formName(blank.answer);
+    const correct = tileId(blank.answer.replaceAll(TATWEEL, ''), blank.answer, !!set.alsoLetters?.length);
 
     if (id === correct) {
       const next = [...filled];

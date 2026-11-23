@@ -23,6 +23,9 @@
   "1f32c": {
     "animated": false
   },
+  "1f331": {
+    "animated": true
+  },
   "1f332": {
     "animated": true
   },
@@ -36,6 +39,9 @@
     "animated": true
   },
   "1f338": {
+    "animated": true
+  },
+  "1f339": {
     "animated": true
   },
   "1f33a": {
@@ -80,8 +86,8 @@
   "1f3eb": {
     "animated": false
   },
-  "1f406": {
-    "animated": false
+  "1f405": {
+    "animated": true
   },
   "1f407": {
     "animated": true
@@ -115,6 +121,9 @@
   },
   "1f42f": {
     "animated": false
+  },
+  "1f433": {
+    "animated": true
   },
   "1f43f": {
     "animated": false
@@ -176,11 +185,11 @@
   "1f56f": {
     "animated": false
   },
-  "1f573": {
-    "animated": false
-  },
   "1f5bc": {
     "animated": false
+  },
+  "1f634": {
+    "animated": true
   },
   "1f642": {
     "animated": true
@@ -300,6 +309,12 @@
     "animated": true
   },
   "1fad2": {
+    "animated": false
+  },
+  "26f0": {
+    "animated": false
+  },
+  "270d": {
     "animated": false
   },
   "270f": {

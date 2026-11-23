@@ -45,3 +45,23 @@ for (const vp of VIEWPORTS.filter((v) => v.kind !== 'phone')) {
   });
 }
 });
+
+test.describe('unit 3 letter-forms ت set @chromium @webkit', () => {
+  test('shows 6 tiles and solves one word by dragging the right tile', async ({ page }) => {
+    await gotoAsTeacher(page, '#/unit/unit-3/letter-forms/ta');
+    const set = getUnit('unit-3')!.letterForms.find((s) => s.id === 'ta')!;
+    await expect(page.locator('[data-tile]')).toHaveCount(6);
+    const wordId = (await page.locator('[data-word]').getAttribute('data-word'))!;
+    const blank = set.items.find((i) => i.id === wordId)!.parts.find((p) => p.type === 'blank')!;
+    const letter = blank.answer.replaceAll('ـ', '');
+    const form = blank.answer.startsWith('ـ') ? (blank.answer.endsWith('ـ') ? 'medial' : 'final') : blank.answer.endsWith('ـ') ? 'initial' : 'isolated';
+    const from = (await page.locator(`[data-tile="${letter}:${form}"]`).boundingBox())!;
+    const to = (await page.locator('[data-blank][data-active="true"]').boundingBox())!;
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + from.width / 2 + 12, from.y + 12, { steps: 2 });
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await expect(page.locator('[data-word]')).toHaveAttribute('data-complete', 'true');
+  });
+});

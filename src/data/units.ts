@@ -37,6 +37,8 @@ export interface LetterFormItem {
 /** One letter's words in Game 3; the child picks a set (letter) first. */
 export interface LetterFormSet {
   id: string; letter: string;
+  /** Other letters whose tiles are offered too (Unit 3's set ت also has the ة tiles). */
+  alsoLetters?: string[];
   name: string;         // e.g. 'حَرْفُ البَاءِ', shown under the letter in the chooser
   instruction: string;
   items: LetterFormItem[];
@@ -157,7 +159,7 @@ const unit2Vocab: VocabWord[] = [
 
 // Unit 3 pictures are in public/images/unit-3/: animated WebP + first-frame still for the GIFs
 // (scripts/convert-unit3.mjs), the original jpg/png otherwise. Word ids are the picture file ids.
-// fahd, hudhud, kahf, wazza and miyah have no `art`: their slides were real-life footage, so they show the
+// fahd, kahf and miyah have no `art`: their slides were real-life footage, so they show a
 // cartoon Noto emoji instead (the GIF conversions stay in the folder as spares).
 const webp3 = (id: string): Art => ({ src: `/images/unit-3/${id}.webp`, type: 'webp', still: `/images/unit-3/${id}-still.webp` });
 
@@ -185,19 +187,19 @@ const unit3Vocab: VocabWord[] = [
   { id: 'salla', text: 'سَلَّةٌ', emoji: '🧺', art: webp3('salla') },
   { id: 'nahla', text: 'نَحْلَةٌ', emoji: '🐝', art: webp3('nahla') },
   { id: 'tawila', text: 'طاوِلَةٌ', emoji: '🪑', art: webp3('tawila') },
-  { id: 'wazza', text: 'وَزَّةٌ', emoji: '🦢' },
+  { id: 'wazza', text: 'وَزَّةٌ', emoji: '🦢', art: webp3('wazza') },
   { id: 'mawja', text: 'مَوْجَةٌ', emoji: '🌊', art: webp3('mawja') },
   // Set ه
   { id: 'nuzha', text: 'نُزْهَةٌ هادِئَةٌ', emoji: '🧺', art: webp3('nuzha') },
-  { id: 'hudhud', text: 'هُدْهُدٌ', emoji: '🐦' },
+  { id: 'hudhud', text: 'هُدْهُدٌ', emoji: '🐦', art: webp3('hudhud') },
   { id: 'hilal', text: 'هِلالٌ', emoji: '🌙', art: webp3('hilal') },
-  { id: 'fahd', text: 'فَهْدٌ', emoji: '🐆' },
+  { id: 'fahd', text: 'فَهْدٌ', emoji: '🐅' },
   { id: 'hadiyya', text: 'هَدِيَّةٌ', emoji: '🎁', art: webp3('hadiyya') },
   { id: 'zahra_jamila', text: 'زَهْرَةٌ', emoji: '🌸', art: webp3('zahra_jamila') },
   { id: 'wajh', text: 'وَجْهٌ', emoji: '🙂', art: webp3('wajh') },
   { id: 'dhahab', text: 'ذَهَبٌ', emoji: '🪙', art: webp3('dhahab') },
   { id: 'nahr', text: 'نَهْرٌ', emoji: '🏞️', art: webp3('nahr') },
-  { id: 'kahf', text: 'كَهْفٌ', emoji: '🕳️' },
+  { id: 'kahf', text: 'كَهْفٌ', emoji: '⛰️' },
   { id: 'haram', text: 'هَرَمٌ', emoji: '🔺', art: webp3('haram') },
   { id: 'miyah', text: 'مِياهٌ', emoji: '💧' },
   { id: 'sahm', text: 'سَهْمٌ', emoji: '⬇️', art: webp3('sahm') },
@@ -691,7 +693,21 @@ export const units: Unit[] = [
     //   wujuh وُجوهٌ جَميلَةٌ | zuhur زُهورٌ جَميلَةٌ
     sentencePictures: [],
     letterForms: [
-      // Set ت comes next.
+      {
+        id: 'ta',
+        letter: 'ت',
+        alsoLetters: ['ة'], // the worksheet mixes ت and ة words, so the set shows 6 tiles
+        name: 'حَرْفُ التَّاءِ',
+        instruction: 'أَخْتارُ الحَرْفَ المُناسِبَ وَأَضَعُهُ مَكانَ النُّقَطِ.',
+        items: [
+          { ...letterFormItem('farasha', 'فَراشَةٌ', 'ة', '🦋'), art: webp3('farasha') },
+          letterFormItem('namat', 'نامَتْ', 'ت', '😴'),
+          letterFormItem('turab', 'تُرابٌ', 'ت', '🌱'),
+          letterFormItem('hut', 'حوتٌ', 'ت', '🐳'),
+          letterFormItem('warda', 'وَرْدَةٌ', 'ة', '🌹'), // the animated Noto rose
+          { ...letterFormItem('kataba', 'كَتَبَ', 'ت', '✍️'), art: webp3('kataba') },
+        ],
+      },
       {
         id: 'ha',
         letter: 'ه',
