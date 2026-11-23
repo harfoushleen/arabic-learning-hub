@@ -218,9 +218,9 @@ test.describe('unit 2 shell @chromium', () => {
     }
   });
 
-  test('home shows 2 unit cards; Unit 2 shows its story and its 5 playable game cards', async ({ page }) => {
+  test('home shows 3 unit cards (teacher mode); Unit 2 shows its story and its 5 playable game cards', async ({ page }) => {
     await gotoAsTeacher(page);
-    await expect(page.locator('[data-unit-card]')).toHaveCount(2);
+    await expect(page.locator('[data-unit-card]')).toHaveCount(3);
     await page.locator('[data-unit-card="unit-2"]').click();
     await expect(page).toHaveURL(/#\/unit\/unit-2$/);
     await expect(page.locator('[data-unit-story]')).toHaveText('فِي البُسْتَانِ');
@@ -244,7 +244,7 @@ test.describe('unit 2 shell @chromium', () => {
   test('a deep link to an unknown game goes home', async ({ page }) => {
     await gotoAsTeacher(page, '#/unit/unit-2/no-such-game');
     await expect(page).toHaveURL(/#\/$/);
-    await expect(page.locator('[data-unit-card]')).toHaveCount(2);
+    await expect(page.locator('[data-unit-card]')).toHaveCount(3);
   });
 
   test('Unit 2 word-picture plays with its emoji pictures', async ({ page }) => {

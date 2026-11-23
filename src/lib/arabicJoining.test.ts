@@ -118,6 +118,19 @@ describe('letterFormItem', () => {
   });
 });
 
+describe('Unit 3 ه set', () => {
+  it('expectedForm gives the worksheet answer for every word', () => {
+    const set = units.find((u) => u.id === 'unit-3')!.letterForms.find((s) => s.id === 'ha')!;
+    expect(set.items.map((item) => [item.id, item.parts.filter((p) => p.type === 'blank').map((p) => p.answer)])).toEqual([
+      ['muharrij', ['ـهـ']],
+      ['fawakih', ['ـه']],
+      ['zuhur', ['هـ']],
+      ['wujuh', ['ه']],
+      ['hadaf', ['هـ']],
+    ]);
+  });
+});
+
 describe('formsFor / formName', () => {
   it('gives a dual-joining letter 4 forms and a non-forward-joiner 2', () => {
     expect(formsFor('ب')).toEqual(['بـ', 'ـبـ', 'ـب', 'ب']);

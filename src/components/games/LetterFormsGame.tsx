@@ -14,12 +14,17 @@ import { DraggableTile } from './drag/DraggableTile';
 import { useDrag, type DropResult } from './drag/useDrag';
 import { GameFinal } from './GameFinal';
 import { GameStage } from './GameStage';
+import { LetterChooser } from './LetterChooser';
 import type { GameProps } from './types';
 
 // Tiles are identified by their form's name (initial/medial/final/isolated); answers are never
 // checked by comparing Arabic strings.
 type TileId = FormName;
 const tilesFor = (letter: string) => formsFor(letter).map((form) => ({ id: formName(form), form }));
+
+// Noto Naskh draws a bare ه (U+0647) like ھ; the textbook's isolated ه is the closed circle, which is the
+// isolated presentation form U+FEE9. Tiles only: words and answers are still checked by form name.
+const tileGlyph = (form: string) => (form === 'ه' ? 'ﻩ' : form);
 
 const SHAKE_MS = 500;
 const WIGGLE_MS = 450;
@@ -94,47 +99,6 @@ export default function LetterFormsGame({ unitId, onExit, subId, onSub }: GamePr
   );
 }
 
-/** Big letter tiles, one per set (built from the data, so a new letter appears by itself). */
-function LetterChooser({
-  sets,
-  title,
-  instruction,
-  onPick,
-  onExit,
-}: {
-  sets: LetterFormSet[];
-  title: string;
-  instruction: string;
-  onPick: (setId: string) => void;
-  onExit?: () => void;
-}) {
-  return (
-    <GameStage title={title} instruction={instruction} onClose={onExit}>
-      <div className="flex h-full flex-wrap content-center items-center justify-center gap-[clamp(16px,4vw,48px)] p-2">
-        {sets.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            data-letter-set={s.id}
-            onClick={() => onPick(s.id)}
-            className="game-piece flex flex-col items-center justify-center gap-2 rounded-card-lg bg-white px-6 pb-4 pt-6 shadow-card transition-transform active:translate-y-[3px] active:shadow-card-pressed focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-ink"
-            style={{ width: 'clamp(150px, calc(var(--app-h, 100dvh) * 0.34), 280px)' }}
-          >
-            {/* A fixed-height box, so letters with a tail (ز) don't push their name lower than others. */}
-            <span
-              className="flex items-center justify-center font-naskh font-bold leading-none text-sky-ink"
-              style={{ fontSize: 'clamp(80px, calc(var(--app-h, 100dvh) * 0.18), 160px)', height: '1.25em' }}
-            >
-              {s.letter}
-            </span>
-            <span className="text-vowelled text-[clamp(22px,calc(var(--app-h,100dvh)*0.04),32px)]">{s.name}</span>
-          </button>
-        ))}
-      </div>
-    </GameStage>
-  );
-}
-
 type Phase = 'playing' | 'holding' | 'word-done' | 'finished';
 
 interface SessionProps {
@@ -156,7 +120,6 @@ function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }
     const previous = previousOrder?.map((id) => items.find((it) => it.id === id)!);
     return previous ? shuffleAvoiding(items, previous) : shuffle(items);
   });
-  const [tileOrders] = useState(() => words.map(() => shuffle(tiles)));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('playing');
   const [filled, setFilled] = useState<(string | null)[]>(() => words[0]!.parts.map(() => null));
@@ -350,7 +313,7 @@ function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }
                 </BigButton>
               </div>
             ) : (
-              tileOrders[index]!.map((tile) => (
+              tiles.map((tile) => (
                 <DraggableTile
                   key={tile.id}
                   id={tile.id}
@@ -369,7 +332,7 @@ function Session({ set, previousOrder, title, onRestart, onOtherLetter, onExit }
                     wiggleTile === tile.id && 'animate-wiggle',
                   )}
                 >
-                  {tile.form}
+                  {tileGlyph(tile.form)}
                 </DraggableTile>
               ))
             )}

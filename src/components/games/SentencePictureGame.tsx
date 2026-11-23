@@ -3,7 +3,7 @@ import { getUnit, type SentencePictureItem } from '@/data/units';
 import { solveFitGrid, useFitGrid, type FitGridConfig } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { useTimers } from '@/hooks/useTimers';
-import { starsFor } from '@/lib/rounds';
+import { roundSizes, starsFor } from '@/lib/rounds';
 import { derange, shuffle } from '@/lib/shuffle';
 import { cn } from '@/lib/utils';
 import { useDrag, type DragState, type DropResult } from './drag/useDrag';
@@ -91,14 +91,53 @@ export default function SentencePictureGame({ unitId, onExit }: GameProps) {
     );
   }
   return (
-    <Session
+    <Rounds
       key={sessionKey}
       items={unit.sentencePictures}
       inOrder={unit.inOrder}
+      roundSize={unit.roundSize}
       title={game.title}
       instruction={game.instruction}
       onRestart={() => setSessionKey((k) => k + 1)}
       onExit={onExit}
+    />
+  );
+}
+
+interface RoundsProps {
+  items: SentencePictureItem[];
+  inOrder?: boolean;
+  roundSize?: number;
+  title: string;
+  instruction: string;
+  onRestart: () => void;
+  onExit?: () => void;
+}
+
+/** Plays the pairs in rounds of `roundSize` (default: all on one screen, as Units 1 and 2 do). */
+function Rounds({ items, inOrder, roundSize, ...rest }: RoundsProps) {
+  const [rounds] = useState(() => {
+    const ordered = inOrder ? [...items] : shuffle(items);
+    let start = 0;
+    return roundSizes(ordered.length, roundSize ?? ordered.length).map((n) => ordered.slice(start, (start += n)));
+  });
+  const [roundIndex, setRoundIndex] = useState(0);
+  const [wrongBefore, setWrongBefore] = useState(0);
+  const doneBefore = rounds.slice(0, roundIndex).reduce((n, r) => n + r.length, 0);
+  return (
+    <Session
+      key={roundIndex}
+      items={rounds[roundIndex]!}
+      inOrder={inOrder}
+      total={items.length}
+      doneBefore={doneBefore}
+      wrongBefore={wrongBefore}
+      isLast={roundIndex === rounds.length - 1}
+      onRoundDone={(wrong) => {
+        setWrongBefore((n) => n + wrong);
+        setRoundIndex((i) => i + 1);
+      }}
+      {...rest}
     />
   );
 }
@@ -108,6 +147,12 @@ interface SessionProps {
   inOrder?: boolean;
   title: string;
   instruction: string;
+  /** Pairs in the whole game, those done in earlier rounds, and the first-try misses so far. */
+  total: number;
+  doneBefore: number;
+  wrongBefore: number;
+  isLast: boolean;
+  onRoundDone: (wrong: number) => void;
   onRestart: () => void;
   onExit?: () => void;
 }
@@ -117,7 +162,7 @@ interface Point {
   y: number;
 }
 
-function Session({ items, inOrder, title, instruction, onRestart, onExit }: SessionProps) {
+function Session({ items, inOrder, title, instruction, total, doneBefore, wrongBefore, isLast, onRoundDone, onRestart, onExit }: SessionProps) {
   // Sentences and pictures are shuffled independently; deranging the sentence order guarantees no
   // row holds a matching pair. A unit that keeps its sentences in order still shuffles the pictures.
   const [order] = useState(() => {
@@ -223,7 +268,9 @@ function Session({ items, inOrder, title, instruction, onRestart, onExit }: Sess
       setMatched(next);
       setPop([sKey(sentenceId), pKey(sentenceId)]);
       later(() => setPop([]), POP_MS);
-      if (next.length === items.length) later(() => setFinished(true), DONE_DELAY_MS);
+      if (next.length === items.length) {
+        later(() => (isLast ? setFinished(true) : onRoundDone(Object.keys(wrongTries).length)), DONE_DELAY_MS);
+      }
       return 'correct';
     }
 
@@ -259,7 +306,7 @@ function Session({ items, inOrder, title, instruction, onRestart, onExit }: Sess
 
   let overlay = null;
   if (finished) {
-    const stars = starsFor(items.length - Object.keys(wrongTries).length, items.length);
+    const stars = starsFor(total - wrongBefore - Object.keys(wrongTries).length, total);
     overlay = <GameFinal stars={stars} onRestart={onRestart} onExit={onExit} confetti="always" />;
   }
 
@@ -299,7 +346,7 @@ function Session({ items, inOrder, title, instruction, onRestart, onExit }: Sess
     <GameStage
       title={title}
       instruction={instruction}
-      progress={{ total: items.length, current: finished ? items.length : matched.length }}
+      progress={{ total, current: finished ? total : doneBefore + matched.length }}
       onClose={onExit}
       playAreaRef={fit.ref}
       scrollable={layout !== null && !layout.fits}

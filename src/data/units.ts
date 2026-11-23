@@ -5,7 +5,7 @@
 // file straight into Node, which resolves neither.
 import { letterFormItem } from '../lib/arabicJoining.ts';
 
-export type GameId = 'word-picture' | 'sentence-picture' | 'letter-forms' | 'unscramble' | 'fill-blank';
+export type GameId = 'word-picture' | 'sentence-picture' | 'letter-forms' | 'unscramble' | 'fill-blank' | 'choose';
 /** A contextual letter form as shown on a choice tile, e.g. 'بـ' 'ـبـ' 'ـب' 'ب' or 'ز' 'ـز'. */
 export type LetterForm = string;
 
@@ -57,6 +57,21 @@ export type FillBlankPart =
 export interface FillBlankSentence { id: string; parts: FillBlankPart[]; }
 /** One word cloud shared by all of a unit's sentences: every word fills exactly one blank. */
 export interface FillBlankData { words: FillBlankWord[]; sentences: FillBlankSentence[]; }
+/** One multiple-choice question (Game 6); the answer is checked by option id. */
+export interface ChooseOption {
+  id: string; text: string;
+  /** Whole words of `text` to stress (split only at spaces, so the letters still join). */
+  highlight?: string;
+  /** A picture of what the option is about, shown beside the text (Noto emoji art). */
+  emoji?: string;
+}
+export interface ChooseQuestion {
+  id: string; question: string;
+  stem?: string;  // a sentence with a blank (ـــ) that fills with the right option
+  options: ChooseOption[]; answerId: string;
+}
+/** One letter's words in Game 1 when a unit has several (the child picks a letter first). */
+export interface WordSet { id: string; letter: string; name: string; wordIds: string[]; }
 export type Theme = 'sky' | 'mint' | 'peach' | 'lavender' | 'lemon';
 export interface GameDef {
   id: GameId; title: string; instruction: string; emoji: string;
@@ -72,6 +87,11 @@ export interface Unit {
   inOrder?: boolean;
   /** Hidden from the home screen (and its links) until the teacher unlocks teacher mode (src/lib/teacher.ts). */
   teacherOnly?: boolean;
+  /** Sentence–picture pairs per round (default: all on one screen). */
+  roundSize?: number;
+  /** Game 1 plays one set at a time, after a letter chooser; without sets it plays all of `vocab`. */
+  wordSets?: WordSet[];
+  choose?: ChooseQuestion[];
   games: GameDef[]; vocab: VocabWord[]; sentencePictures: SentencePictureItem[];
   letterForms: LetterFormSet[]; unscramble: UnscrambleSet[];
   fillBlank?: FillBlankData;
@@ -133,6 +153,57 @@ const unit2Vocab: VocabWord[] = [
   { id: 'dirs', text: 'ضِرْسٌ', emoji: '🦷', art: { src: '/images/unit-2/dirs.webp', type: 'webp', still: '/images/unit-2/dirs-still.webp' } },
   { id: 'nasr', text: 'نَسْرٌ', emoji: '🦅', art: { src: '/images/unit-2/nasr.webp', type: 'webp', still: '/images/unit-2/nasr-still.webp' } },
   { id: 'sahir', text: 'سَاحِرٌ', emoji: '🧙', image: '/images/unit-2/sahir.jpg' },
+];
+
+// Unit 3 pictures are in public/images/unit-3/: animated WebP + first-frame still for the GIFs
+// (scripts/convert-unit3.mjs), the original jpg/png otherwise. Word ids are the picture file ids.
+// fahd, hudhud, kahf, wazza and miyah have no `art`: their slides were real-life footage, so they show the
+// cartoon Noto emoji instead (the GIF conversions stay in the folder as spares).
+const webp3 = (id: string): Art => ({ src: `/images/unit-3/${id}.webp`, type: 'webp', still: `/images/unit-3/${id}-still.webp` });
+
+const unit3Vocab: VocabWord[] = [
+  // Set ت
+  { id: 'zayt', text: 'زَيْتٌ', emoji: '🫒', image: '/images/unit-3/zayt.jpg', confusableWith: ['zaytun'] },
+  { id: 'zaytun', text: 'زَيْتونٌ', emoji: '🫒', image: '/images/unit-3/zaytun.jpg', confusableWith: ['zayt'] },
+  { id: 'taj', text: 'تاجٌ', emoji: '👑', art: webp3('taj') },
+  { id: 'bustan', text: 'بُسْتانٌ', emoji: '🌳', image: '/images/unit-3/bustan.jpg' },
+  { id: 'tamr', text: 'تَمْرٌ', emoji: '🌴', image: '/images/unit-3/tamr.jpg' },
+  { id: 'tut', text: 'توتٌ', emoji: '🫐', image: '/images/unit-3/tut.jpg' },
+  { id: 'timsah', text: 'تِمْساحٌ', emoji: '🐊', art: webp3('timsah') },
+  { id: 'rawat', text: 'رَوَتْ', emoji: '🪴', art: webp3('rawat') },
+  { id: 'mizalla', text: 'مِظَلَّةٌ', emoji: '☂️', art: webp3('mizalla') },
+  { id: 'zahra', text: 'زَهْرَةٌ', emoji: '🌺', art: webp3('zahra') },
+  { id: 'namla', text: 'نَمْلَةٌ', emoji: '🐜', art: webp3('namla') },
+  { id: 'hamama', text: 'حَمامَةٌ', emoji: '🕊️', art: webp3('hamama') },
+  { id: 'urjuha', text: 'أُرْجوحَةٌ', emoji: '🛝', art: webp3('urjuha') },
+  { id: 'ibra', text: 'إِبْرَةٌ', emoji: '🪡', art: webp3('ibra') },
+  { id: 'arza', text: 'أَرْزَةٌ', emoji: '🌲', image: '/images/unit-3/arza.jpg' },
+  { id: 'shawka', text: 'شَوْكَةٌ', emoji: '🍴', image: '/images/unit-3/shawka.png' },
+  { id: 'shajara', text: 'شَجَرَةٌ', emoji: '🌳', image: '/images/unit-3/shajara.jpg' },
+  { id: 'labna', text: 'لَبْنَةٌ', emoji: '🥣', image: '/images/unit-3/labna.jpg' },
+  { id: 'duda', text: 'دودَةٌ', emoji: '🐛', art: webp3('duda') },
+  { id: 'salla', text: 'سَلَّةٌ', emoji: '🧺', art: webp3('salla') },
+  { id: 'nahla', text: 'نَحْلَةٌ', emoji: '🐝', art: webp3('nahla') },
+  { id: 'tawila', text: 'طاوِلَةٌ', emoji: '🪑', art: webp3('tawila') },
+  { id: 'wazza', text: 'وَزَّةٌ', emoji: '🦢' },
+  { id: 'mawja', text: 'مَوْجَةٌ', emoji: '🌊', art: webp3('mawja') },
+  // Set ه
+  { id: 'nuzha', text: 'نُزْهَةٌ هادِئَةٌ', emoji: '🧺', art: webp3('nuzha') },
+  { id: 'hudhud', text: 'هُدْهُدٌ', emoji: '🐦' },
+  { id: 'hilal', text: 'هِلالٌ', emoji: '🌙', art: webp3('hilal') },
+  { id: 'fahd', text: 'فَهْدٌ', emoji: '🐆' },
+  { id: 'hadiyya', text: 'هَدِيَّةٌ', emoji: '🎁', art: webp3('hadiyya') },
+  { id: 'zahra_jamila', text: 'زَهْرَةٌ', emoji: '🌸', art: webp3('zahra_jamila') },
+  { id: 'wajh', text: 'وَجْهٌ', emoji: '🙂', art: webp3('wajh') },
+  { id: 'dhahab', text: 'ذَهَبٌ', emoji: '🪙', art: webp3('dhahab') },
+  { id: 'nahr', text: 'نَهْرٌ', emoji: '🏞️', art: webp3('nahr') },
+  { id: 'kahf', text: 'كَهْفٌ', emoji: '🕳️' },
+  { id: 'haram', text: 'هَرَمٌ', emoji: '🔺', art: webp3('haram') },
+  { id: 'miyah', text: 'مِياهٌ', emoji: '💧' },
+  { id: 'sahm', text: 'سَهْمٌ', emoji: '⬇️', art: webp3('sahm') },
+  { id: 'hawa', text: 'هَواءٌ', emoji: '🌬️', art: webp3('hawa') },
+  { id: 'hajama', text: 'هَجَمَ', emoji: '🐯', art: webp3('hajama') },
+  { id: 'haraba', text: 'هَرَبَ', emoji: '🏃', art: webp3('haraba') },
 ];
 
 /**
@@ -550,6 +621,202 @@ export const units: Unit[] = [
       ],
     },
   },
+  {
+    id: 'unit-3',
+    label: 'الوَحْدَةُ الثَّالِثَةُ',
+    title: 'ت ه',
+    letters: ['ت', 'ه'],
+    theme: 'peach',
+    teacherOnly: true,
+    roundSize: 5,
+    games: [
+      {
+        id: 'letter-forms',
+        title: 'أَشْكَالُ الحُرُوفِ',
+        instruction: 'أَخْتَارُ الحَرْفَ', // the letter chooser; each set has its own instruction
+        emoji: '🔤',
+        short: 'أَخْتَارُ حَرْفًا وَأُكْمِلُ الكَلِمَةَ',
+        theme: 'mint',
+      },
+      {
+        id: 'word-picture',
+        title: 'رَبْطُ الكَلِمَةِ بِالصُّورَةِ',
+        instruction: 'أَضَعُ الكَلِمَةَ المُناسِبَةَ تَحْتَ الرَّسْمِ.',
+        emoji: '🖼️',
+        short: 'أَضَعُ الكَلِمَةَ تَحْتَ صُورَتِهَا',
+        theme: 'sky',
+      },
+      {
+        id: 'unscramble',
+        title: 'تَرْتِيبُ الكَلِمَاتِ',
+        instruction: 'أُرَتِّبُ الكَلِماتِ لِأَحْصُلَ عَلى جُمَلٍ مُفيدَةٍ.',
+        emoji: '🧩',
+        short: 'أُرَتِّبُ الكَلِمَاتِ فِي جُمْلَةٍ',
+        theme: 'lemon',
+      },
+      {
+        id: 'choose',
+        title: 'اخْتِيَارُ الجَوَابِ',
+        instruction: 'أَخْتارُ الجَوابَ الصَّحيحَ.',
+        emoji: '✅',
+        short: 'أَخْتَارُ الجَوَابَ الصَّحِيحَ',
+        theme: 'sky',
+      },
+      {
+        id: 'fill-blank',
+        title: 'مَلْءُ الفَرَاغِ',
+        instruction: 'أَمْلَأُ الفَراغَ بِالكَلِمَةِ المُناسِبَةِ.',
+        emoji: '✏️',
+        short: 'أَضَعُ الكَلِمَةَ فِي مَكَانِهَا',
+        theme: 'lavender',
+      },
+      {
+        id: 'sentence-picture',
+        title: 'رَبْطُ الجُمْلَةِ بِالرَّسْمِ',
+        instruction: 'أَصِلُ الجُمْلَةَ بِالرَّسْمِ المُناسِبِ لَها.',
+        emoji: '📖',
+        short: 'أَصِلُ الجُمْلَةَ بِرَسْمِهَا',
+        theme: 'peach',
+      },
+    ],
+    vocab: unit3Vocab,
+    wordSets: [
+      { id: 'ta', letter: 'ت', name: 'حَرْفُ التَّاءِ', wordIds: ['zayt', 'zaytun', 'taj', 'bustan', 'tamr', 'tut', 'timsah', 'rawat', 'mizalla', 'zahra', 'namla', 'hamama', 'urjuha', 'ibra', 'arza', 'shawka', 'shajara', 'labna', 'duda', 'salla', 'nahla', 'tawila', 'wazza', 'mawja'] },
+      { id: 'ha', letter: 'ه', name: 'حَرْفُ الهَاءِ', wordIds: ['nuzha', 'hudhud', 'hilal', 'fahd', 'hadiyya', 'zahra_jamila', 'wajh', 'dhahab', 'nahr', 'kahf', 'haram', 'miyah', 'sahm', 'hawa', 'hajama', 'haraba'] },
+    ],
+    // TODO(teacher): the sentence–picture images are still to come; until then the game shows "coming soon".
+    // The 10 sentences, in worksheet order (each has a spare animation/picture in public/images/unit-3/):
+    //   hatif رَنَّ الْهاتِفُ. | kahraba اَلْكَهْرَباءُ خَطِرَةٌ. | zahr ظَهْرٌ مُسْتَقيمٌ | kursi كُرْسِيٌّ هَزّازٌ |
+    //   hirr هِرٌّ سَريعٌ | bint بِنْتٌ هادِئَةٌ | fakiha فاكِهَةٌ شَهِيَّةٌ | muharrij مُهَرِّجٌ ماهِرٌ |
+    //   wujuh وُجوهٌ جَميلَةٌ | zuhur زُهورٌ جَميلَةٌ
+    sentencePictures: [],
+    letterForms: [
+      // Set ت comes next.
+      {
+        id: 'ha',
+        letter: 'ه',
+        name: 'حَرْفُ الهَاءِ',
+        instruction: 'أَخْتارُ الحَرْفَ المُناسِبَ وَأَضَعُهُ مَكانَ النُّقَطِ.',
+        items: [
+          { ...letterFormItem('muharrij', 'مُهَرِّجٌ', 'ه', '🤡'), art: webp3('muharrij') },
+          letterFormItem('fawakih', 'فَواكِهْ', 'ه', '🍇'),
+          { ...letterFormItem('zuhur', 'زُهورٌ', 'ه', '💐'), art: webp3('zuhur') },
+          { ...letterFormItem('wujuh', 'وُجوهٌ', 'ه', '👥'), image: '/images/unit-3/wujuh.jpg' },
+          { ...letterFormItem('hadaf', 'هَدَفٌ', 'ه', '🥅'), art: webp3('hadaf_2') }, // the football goal
+        ],
+      },
+    ],
+    // The 4 story sentences, tiles listed in the correct order here (the game shuffles them).
+    unscramble: [
+      {
+        id: 'set-1',
+        tiles: [
+          { id: 'ghuyum', text: 'غُيومُ' },
+          { id: 'alkharif', text: 'الخَريفِ' },
+          { id: 'satarat', text: 'سَتَرَتِ' },
+          { id: 'ashams', text: 'الشَّمْسَ' },
+        ],
+        answers: [['ghuyum', 'alkharif', 'satarat', 'ashams']],
+      },
+      {
+        id: 'set-2',
+        tiles: [
+          { id: 'fattasha', text: 'فَتَّشَ' },
+          { id: 'alarnab', text: 'الأَرْنَبُ' },
+          { id: 'farhan', text: 'فَرْحانُ' },
+          { id: 'anha', text: 'عَنْها' },
+          { id: 'fi-gaba', text: 'في غابَةٍ' },
+          { id: 'baida', text: 'بَعيدَةٍ' },
+        ],
+        answers: [['fattasha', 'alarnab', 'farhan', 'anha', 'fi-gaba', 'baida']],
+      },
+      {
+        id: 'set-3',
+        tiles: [
+          { id: 'ada', text: 'عادَ' },
+          { id: 'farhan', text: 'فَرْحانُ' },
+          { id: 'ila-ahlihi', text: 'إِلى أَهْلِهِ' },
+          { id: 'wawakrihi', text: 'وَوَكْرِهِ' },
+        ],
+        answers: [['ada', 'farhan', 'ila-ahlihi', 'wawakrihi']],
+      },
+      {
+        id: 'set-4',
+        tiles: [
+          { id: 'shahada', text: 'شاهَدَ' },
+          { id: 'farhan', text: 'فَرْحانُ' },
+          { id: 'awda', text: 'عَوْدَةَ' },
+          { id: 'ashams', text: 'الشَّمْسِ' },
+          { id: 'assatia', text: 'السّاطِعَةِ' },
+        ],
+        answers: [['shahada', 'farhan', 'awda', 'ashams', 'assatia']],
+      },
+    ],
+    // Questions follow the story, so they keep this order; only the options shuffle.
+    choose: [
+      {
+        id: 'q1',
+        question: 'ماذا سَتَرَتْ غُيومُ الخَريفِ؟',
+        stem: 'سَتَرَتْ غُيومُ الخَريفِ ـــ.',
+        options: [
+          { id: 'qamar', text: 'القَمَرَ', emoji: '🌙' },
+          { id: 'shams', text: 'الشَّمْسَ', emoji: '☀️' },
+        ],
+        answerId: 'shams',
+      },
+      {
+        id: 'q2',
+        question: 'مَنْ فَتَّشَ عَنِ الشَّمْسِ في غابَةٍ بَعيدَةٍ؟',
+        options: [
+          { id: 'dog', text: 'فَتَّشَ الكَلْبُ بارودُ عَنِ الشَّمْسِ في غابَةٍ بَعيدَةٍ.', highlight: 'الكَلْبُ بارودُ', emoji: '🐩' },
+          { id: 'rabbit', text: 'فَتَّشَ الأَرْنَبُ فَرْحانُ عَنِ الشَّمْسِ في غابَةٍ بَعيدَةٍ.', highlight: 'الأَرْنَبُ فَرْحانُ', emoji: '🐇' },
+        ],
+        answerId: 'rabbit',
+      },
+      {
+        id: 'q3',
+        question: 'في أَيِّ فَصْلٍ جَرَتْ أَحْداثُ القِصَّةِ؟',
+        options: [
+          { id: 'autumn', text: 'الخَريفُ', emoji: '🍂' },
+          { id: 'winter', text: 'الشِّتاءُ', emoji: '❄️' },
+          { id: 'spring', text: 'الرَّبيعُ', emoji: '🌷' },
+          { id: 'summer', text: 'الصَّيْفُ', emoji: '🏖️' },
+        ],
+        answerId: 'autumn',
+      },
+    ],
+    // Worksheet order for the sentences and the cloud: the one game that is not shuffled.
+    fillBlank: {
+      words: [
+        { id: 'shams', text: 'الشَّمْسَ' },
+        { id: 'baida', text: 'بَعيدَةٍ' },
+        { id: 'ghuyum', text: 'غُيومُ' },
+        { id: 'farhan', text: 'فَرْحانُ' },
+      ],
+      sentences: [
+        {
+          id: 's1',
+          parts: [
+            { type: 'text', value: 'سَتَرَتْ ' },
+            { type: 'blank', accept: ['ghuyum'] },
+            { type: 'text', value: ' الخَريفِ ' },
+            { type: 'blank', accept: ['shams'] },
+            { type: 'text', value: '.' },
+          ],
+        },
+        {
+          id: 's2',
+          parts: [
+            { type: 'text', value: 'فَتَّشَ الأَرْنَبُ ' },
+            { type: 'blank', accept: ['farhan'] },
+            { type: 'text', value: ' عَنْها في غابَةٍ ' },
+            { type: 'blank', accept: ['baida'] },
+            { type: 'text', value: '.' },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 /** Every Game 3 word of a unit, across its letter sets. */
@@ -570,6 +837,8 @@ export function gameHasContent(unit: Unit, gameId: GameId): boolean {
       return unit.unscramble.some((set) => set.answers.length > 0);
     case 'fill-blank':
       return (unit.fillBlank?.sentences.length ?? 0) > 0;
+    case 'choose':
+      return (unit.choose?.length ?? 0) > 0;
   }
 }
 

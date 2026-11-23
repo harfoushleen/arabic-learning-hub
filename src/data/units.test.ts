@@ -109,6 +109,20 @@ describe('units data', () => {
     ]);
   });
 
+  it('Unit 3 is teacher-only; its two word sets are disjoint, cover only vocab, and every choose answer exists', () => {
+    const unit = getUnit('unit-3')!;
+    expect(unit.teacherOnly).toBe(true);
+    expect(unit.wordSets!.map((s) => [s.id, s.wordIds.length])).toEqual([['ta', 24], ['ha', 16]]);
+    const ids = unit.wordSets!.flatMap((s) => s.wordIds);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.every((id) => unit.vocab.some((w) => w.id === id))).toBe(true);
+    for (const q of unit.choose!) {
+      expect(q.options.map((o) => o.id), q.id).toContain(q.answerId);
+      expect(new Set(q.options.map((o) => o.id)).size, q.id).toBe(q.options.length);
+    }
+    expect(unit.games.map((g) => g.id)).toEqual(['letter-forms', 'word-picture', 'unscramble', 'choose', 'fill-blank', 'sentence-picture']);
+  });
+
   it('Unit 1 has content for every one of its games', () => {
     const unit = getUnit('unit-1')!;
     expect(unit.games.filter((g) => !gameHasContent(unit, g.id))).toEqual([]);
@@ -199,7 +213,7 @@ describe('units data', () => {
   });
 
   it('every emoji in units.ts has at least a static Noto SVG in public/emoji/', () => {
-    const emoji = units.flatMap((u) => [...u.vocab.map((w) => w.emoji), ...letterFormItems(u).map((f) => f.emoji), ...u.games.map((g) => g.emoji)]);
+    const emoji = units.flatMap((u) => [...u.vocab.map((w) => w.emoji), ...letterFormItems(u).map((f) => f.emoji), ...u.games.map((g) => g.emoji), ...(u.choose ?? []).flatMap((q) => q.options.flatMap((o) => (o.emoji ? [o.emoji] : [])))]);
     const missing = [...new Set(emoji)].filter((e) => !existsSync(`${publicDir}emoji/${emojiCodepoints(e)}.svg`));
     expect(missing, 'run: node scripts/fetch-emoji-assets.mjs').toEqual([]);
   });
