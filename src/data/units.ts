@@ -699,12 +699,13 @@ export const units: Unit[] = [
       { id: 'ta', letter: 'ت', name: 'حَرْفُ التَّاءِ', wordIds: ['zayt', 'zaytun', 'taj', 'bustan', 'tamr', 'tut', 'timsah', 'rawat', 'mizalla', 'zahra', 'namla', 'hamama', 'urjuha', 'ibra', 'arza', 'shawka', 'shajara', 'labna', 'duda', 'salla', 'nahla', 'tawila', 'wazza', 'mawja'] },
       { id: 'ha', letter: 'ه', name: 'حَرْفُ الهَاءِ', wordIds: ['nuzha', 'hudhud', 'hilal', 'fahd', 'hadiyya', 'zahra_jamila', 'wajh', 'dhahab', 'nahr', 'kahf', 'haram', 'miyah', 'sahm', 'hawa', 'hajama', 'haraba'] },
     ],
-    // The 4 story sentences, completed, with the same scenes as the unscramble game.
+    // The 5 story sentences, completed, with the same scenes as the unscramble game.
     sentencePictures: [
-      { id: 'sp-1', sentence: 'غُيومُ الخَريفِ سَتَرَتِ الشَّمْسَ.', image: '/images/unit-3/scene-1.webp' },
+      { id: 'sp-1', sentence: 'سَتَرَتْ غُيومُ الخَريفِ الشَّمْسَ.', image: '/images/unit-3/scene-1.webp' },
       { id: 'sp-2', sentence: 'فَتَّشَ الأَرْنَبُ فَرْحانُ عَنْها في غابَةٍ بَعيدَةٍ.', image: '/images/unit-3/scene-2.webp' },
-      { id: 'sp-3', sentence: 'عادَ فَرْحانُ إِلى أَهْلِهِ وَوَكْرِهِ.', image: '/images/unit-3/scene-3.webp' },
-      { id: 'sp-4', sentence: 'شاهَدَ فَرْحانُ عَوْدَةَ الشَّمْسِ السّاطِعَةِ.', image: '/images/unit-3/scene-4.webp' },
+      { id: 'sp-3', sentence: 'قالَتْ لَهُ العُصْفورَةُ: «الشَّمْسُ سَتَعودُ».', image: '/images/unit-3/bird-sun.webp' },
+      { id: 'sp-4', sentence: 'عادَ فَرْحانُ إِلى أَهْلِهِ وَوَكْرِهِ.', image: '/images/unit-3/scene-3.webp' },
+      { id: 'sp-5', sentence: 'شاهَدَ فَرْحانُ عَوْدَةَ الشَّمْسِ السّاطِعَةِ.', image: '/images/unit-3/scene-4.webp' },
     ],
     letterForms: [
       {
@@ -736,18 +737,18 @@ export const units: Unit[] = [
         ],
       },
     ],
-    // The 4 story sentences, tiles listed in the correct order here (the game shuffles them).
+    // The 5 story sentences (textbook order), tiles listed in the correct order here (the game shuffles them).
     unscramble: [
       {
         id: 'set-1',
         image: '/images/unit-3/scene-1.webp',
         tiles: [
+          { id: 'satarat', text: 'سَتَرَتْ' },
           { id: 'ghuyum', text: 'غُيومُ' },
           { id: 'alkharif', text: 'الخَريفِ' },
-          { id: 'satarat', text: 'سَتَرَتِ' },
           { id: 'ashams', text: 'الشَّمْسَ' },
         ],
-        answers: [['ghuyum', 'alkharif', 'satarat', 'ashams']],
+        answers: [['satarat', 'ghuyum', 'alkharif', 'ashams']],
       },
       {
         id: 'set-2',
@@ -763,7 +764,20 @@ export const units: Unit[] = [
         answers: [['fattasha', 'alarnab', 'farhan', 'anha', 'fi-gaba', 'baida']],
       },
       {
+        // The colon and the quotation marks stay attached to their words; the game adds the final full stop.
         id: 'set-3',
+        image: '/images/unit-3/bird-sun.webp',
+        tiles: [
+          { id: 'qalat', text: 'قالَتْ' },
+          { id: 'lahu', text: 'لَهُ' },
+          { id: 'alusfura', text: 'العُصْفورَةُ:' },
+          { id: 'ashams', text: '«الشَّمْسُ' },
+          { id: 'sataud', text: 'سَتَعودُ»' },
+        ],
+        answers: [['qalat', 'lahu', 'alusfura', 'ashams', 'sataud']],
+      },
+      {
+        id: 'set-4',
         image: '/images/unit-3/scene-3.webp',
         tiles: [
           { id: 'ada', text: 'عادَ' },
@@ -774,7 +788,7 @@ export const units: Unit[] = [
         answers: [['ada', 'farhan', 'ila-ahlihi', 'wawakrihi']],
       },
       {
-        id: 'set-4',
+        id: 'set-5',
         image: '/images/unit-3/scene-4.webp',
         tiles: [
           { id: 'shahada', text: 'شاهَدَ' },
