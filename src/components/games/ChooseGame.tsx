@@ -14,11 +14,12 @@ const SHAKE_MS = 500;
 const NEXT_MS = 1900; // long enough to see the confetti and the green answer
 const BLANK = /ـ+/; // the stem's blank (ـــ)
 
-export default function ChooseGame({ unitId, onExit }: GameProps) {
+export default function ChooseGame({ unitId, gameId = 'choose', onExit }: GameProps) {
   const [sessionKey, setSessionKey] = useState(0);
   const unit = getUnit(unitId);
-  const game = unit?.games.find((g) => g.id === 'choose');
-  if (!unit || !game || !unit.choose?.length) {
+  const game = unit?.games.find((g) => g.id === gameId);
+  const questions = gameId === 'demonstratives' ? unit?.demonstratives : unit?.choose;
+  if (!unit || !game || !questions?.length) {
     return (
       <GameStage onClose={onExit}>
         <p className="p-8 text-center text-vowelled text-3xl">لَا تُوجَدُ أَسْئِلَةٌ</p>
@@ -28,7 +29,7 @@ export default function ChooseGame({ unitId, onExit }: GameProps) {
   return (
     <Session
       key={sessionKey}
-      questions={unit.choose}
+      questions={questions}
       title={game.title}
       instruction={game.instruction}
       onRestart={() => setSessionKey((k) => k + 1)}
@@ -99,10 +100,19 @@ function Session({ questions, title, instruction, onRestart, onExit }: SessionPr
       overlayOpaque
     >
       {!finished && (
-        <div className="flex h-full flex-col items-center justify-center gap-[clamp(12px,3vh,32px)] p-2">
-          <h2 data-question={q.id} className="text-center text-vowelled text-[clamp(32px,6vh,52px)] text-ink">
-            {q.question}
-          </h2>
+        <div data-question={q.id} className="flex h-full flex-col items-center justify-center gap-[clamp(12px,3vh,32px)] p-2">
+          {(q.emoji || q.art || q.image) && (
+            <div data-picture className="flex shrink-0 items-center justify-center rounded-3xl bg-white shadow-md" style={{ width: 'clamp(120px, 30vh, 240px)', height: 'clamp(120px, 30vh, 240px)' }}>
+              {q.image && !q.art ? (
+                <img src={q.image} alt="" draggable={false} className="pointer-events-none h-full w-full object-contain p-2" />
+              ) : (
+                <EmojiArt emoji={q.emoji ?? ''} art={q.art} size="85%" play loop />
+              )}
+            </div>
+          )}
+          {q.question && (
+            <h2 className="text-center text-vowelled text-[clamp(32px,6vh,52px)] text-ink">{q.question}</h2>
+          )}
           {q.stem && (
             <p data-stem className="text-center text-vowelled text-[clamp(32px,5.5vh,48px)] text-sky-ink">
               {chosen ? (

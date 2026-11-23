@@ -66,35 +66,21 @@ test.describe('unit 3 letter-forms ت set @chromium @webkit', () => {
   });
 });
 
-test.describe('unit 3 demonstratives fill-blank @chromium @webkit', () => {
-  const DATA = getUnit('unit-3')!.fillBlank2!;
-  const answerOf = (n: number) => DATA.sentences[n]!.parts.find((p) => p.type === 'blank')!.accept[0]!;
+test.describe('unit 3 demonstratives @chromium @webkit', () => {
+  const ITEMS = getUnit('unit-3')!.demonstratives!;
 
-  async function dragTo(page: import('@playwright/test').Page, chipId: string, blankKey: string) {
-    const from = (await page.locator(`[data-tile="${chipId}"]`).boundingBox())!;
-    const to = (await page.locator(`[data-blank="${blankKey}"]`).boundingBox())!;
-    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(from.x + from.width / 2 + 12, from.y + 12, { steps: 2 });
-    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
-    await page.mouse.up();
-  }
-
-  test('the same chip fills many blanks, a wrong chip is rejected, and all 12 reach the final screen', async ({ page }) => {
-    await gotoAsTeacher(page, '#/unit/unit-3/fill-blank-2');
-    await expect(page.locator('[data-sentence]')).toHaveCount(12);
-    await expect(page.locator('[data-tile]')).toHaveCount(2);
-
-    // A wrong chip bounces back and leaves the blank empty.
-    const wrong = answerOf(0) === 'hatha' ? 'hathihi' : 'hatha';
-    await dragTo(page, wrong, `${DATA.sentences[0]!.id}:0`);
-    await expect(page.locator(`[data-blank="${DATA.sentences[0]!.id}:0"]`)).toHaveAttribute('data-state', 'empty');
-    await page.waitForTimeout(700); // the rejected chip shakes for 500 ms and can't be dragged meanwhile
-
-    for (const [n, s] of DATA.sentences.entries()) {
-      await dragTo(page, answerOf(n), `${s.id}:0`);
-      await expect(page.locator(`[data-blank="${s.id}:0"]`)).toHaveAttribute('data-state', 'filled');
-      if (n < DATA.sentences.length - 1) await expect(page.locator('[data-tile]')).toHaveCount(2); // chips are never used up
+  test('one picture per screen: a wrong tap is disabled, the right one moves on, all 12 reach the final screen', async ({ page }) => {
+    await gotoAsTeacher(page, '#/unit/unit-3/demonstratives');
+    for (const [i, q] of ITEMS.entries()) {
+      await expect(page.locator(`[data-question="${q.id}"]`)).toBeVisible();
+      await expect(page.locator('[data-picture]')).toBeVisible();
+      if (i === 0) {
+        const wrong = q.options.find((o) => o.id !== q.answerId)!.id;
+        await page.locator(`[data-option="${wrong}"]`).click();
+        await expect(page.locator(`[data-option="${wrong}"]`)).toBeDisabled();
+      }
+      await page.locator(`[data-option="${q.answerId}"]`).click();
+      await expect(page.locator('[data-filled]')).toBeVisible();
     }
     await expect(page.getByRole('button', { name: 'أَعِدِ اللُّعْبَةَ' })).toBeVisible();
   });
@@ -102,9 +88,9 @@ test.describe('unit 3 demonstratives fill-blank @chromium @webkit', () => {
   for (const vp of VIEWPORTS.filter((v) => v.kind !== 'phone')) {
     test(`fits without scrolling on ${vp.name}`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
-      await gotoAsTeacher(page, '#/unit/unit-3/fill-blank-2');
-      await expect(page.locator('[data-sentence]')).toHaveCount(12);
-      await expectFits(page, `fill-blank-2 @ ${vp.name}`, false);
+      await gotoAsTeacher(page, '#/unit/unit-3/demonstratives');
+      await expect(page.locator('[data-picture]')).toBeVisible();
+      await expectFits(page, `demonstratives @ ${vp.name}`, false);
     });
   }
 });

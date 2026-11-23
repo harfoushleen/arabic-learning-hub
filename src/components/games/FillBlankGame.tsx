@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getUnit, type FillBlankData, type FillBlankPart, type FillBlankSentence, type FillBlankWord, type Theme } from '@/data/units';
+import { getUnit, type FillBlankPart, type FillBlankSentence, type FillBlankWord, type Theme } from '@/data/units';
 import { solveFitGrid, useFitGrid, type FitGridConfig, type FitGridLayout } from '@/hooks/useFitGrid';
 import { useFontsReady } from '@/hooks/useFontsReady';
 import { useTimers } from '@/hooks/useTimers';
@@ -33,9 +33,6 @@ const BADGE = 36; // the sentence number
 const BADGE_GAP = 8;
 const MAX_FONT = 48; // sentence text; chips use up to 30px, down to 24px
 const MIN_FONT = 28;
-const MIN_FONT_COLUMNS = 24; // two columns: the sentence-game minimum, so 12 lines fit a short laptop
-const ROW_GAP_COLUMNS = 4;
-const CLOUD_PAD_Y_COLUMNS = 4; // a slimmer cloud, same reason
 const STORY_FONT = 32;
 const LINE = 1.8; // text-vowelled line-height
 const CLOUD_PAD_X = 28;
@@ -68,7 +65,6 @@ interface Blank {
 }
 
 interface Content {
-  columns: number;
   sentences: FillBlankSentence[];
   words: FillBlankWord[];
   blanks: Blank[];
@@ -81,9 +77,6 @@ interface Metrics {
   chipW: Record<string, number>;
   blankW: number;
   contentWidth: number;
-  columns: number;
-  rowGap: number;
-  cloudPadY: number;
   sentencesH: number;
   cloudH: number;
 }
@@ -138,20 +131,11 @@ function sentenceLines(sentence: FillBlankSentence, font: number, blankW: number
 /** Sizes for a sentence font: every sentence card at its own height, and the cloud for all the chips. */
 function metrics(content: Content, font: number, areaWidth: number): Metrics {
   const contentWidth = Math.min(areaWidth, MAX_CONTENT);
-  const rowGap = content.columns > 1 ? ROW_GAP_COLUMNS : ROW_GAP;
-  const cloudPadY = content.columns > 1 ? CLOUD_PAD_Y_COLUMNS : CLOUD_PAD_Y;
-  const cardW = (contentWidth - (content.columns - 1) * rowGap) / content.columns;
-  const textArea = cardW - 2 * (CARD_PAD_X + BORDER) - BADGE - BADGE_GAP;
+  const textArea = contentWidth - 2 * (CARD_PAD_X + BORDER) - BADGE - BADGE_GAP;
   const blankW = uniformBlankWidth(content, font);
   const lineH = Math.ceil(font * LINE);
   const cardsH = content.sentences.map((s) => sentenceLines(s, font, blankW, textArea) * lineH + 2 * (CARD_PAD_Y + BORDER));
-  // Cards fill the grid row by row; a row is as tall as its tallest card.
-  const rowsH: number[] = [];
-  cardsH.forEach((h, i) => {
-    const row = Math.floor(i / content.columns);
-    rowsH[row] = Math.max(rowsH[row] ?? 0, h);
-  });
-  const sentencesH = rowsH.reduce((sum, h) => sum + h, 0) + (rowsH.length - 1) * rowGap;
+  const sentencesH = cardsH.reduce((sum, h) => sum + h, 0) + (cardsH.length - 1) * ROW_GAP;
 
   const chipFont = Math.min(30, Math.max(24, Math.round(font * 0.66)));
   const chipH = Math.max(56, Math.ceil(chipFont * LINE)); // tap targets stay ≥ 56px
@@ -159,15 +143,15 @@ function metrics(content: Content, font: number, areaWidth: number): Metrics {
   const chipW: Record<string, number> = {};
   for (const w of content.words) chipW[w.id] = Math.max(56, Math.ceil(textWidth(w.text, chipFont) * 1.04) + 2 * (padX + BORDER));
   const rows = rowCount(Object.values(chipW), contentWidth - 2 * CLOUD_PAD_X);
-  const bodyH = Math.max(rows * chipH + (rows - 1) * PIECE_GAP, MIN_BODY_H) + 2 * cloudPadY;
-  return { font, chipFont, chipH, chipW, blankW, contentWidth, columns: content.columns, rowGap, cloudPadY, sentencesH, cloudH: PUFF + bodyH };
+  const bodyH = Math.max(rows * chipH + (rows - 1) * PIECE_GAP, MIN_BODY_H) + 2 * CLOUD_PAD_Y;
+  return { font, chipFont, chipH, chipW, blankW, contentWidth, sentencesH, cloudH: PUFF + bodyH };
 }
 
-export default function FillBlankGame({ unitId, gameId = 'fill-blank', onExit }: GameProps) {
+export default function FillBlankGame({ unitId, onExit }: GameProps) {
   const [session, setSession] = useState(0);
   const unit = getUnit(unitId);
-  const game = unit?.games.find((g) => g.id === gameId);
-  const data = gameId === 'fill-blank-2' ? unit?.fillBlank2 : unit?.fillBlank;
+  const game = unit?.games.find((g) => g.id === 'fill-blank');
+  const data = unit?.fillBlank;
 
   if (!unit || !game || !data || data.sentences.length === 0) {
     return (
@@ -194,7 +178,7 @@ export default function FillBlankGame({ unitId, gameId = 'fill-blank', onExit }:
 type Phase = 'playing' | 'holding' | 'finished';
 
 interface SessionProps {
-  data: FillBlankData;
+  data: { words: FillBlankWord[]; sentences: FillBlankSentence[] };
   story?: string;
   storyTheme: Theme;
   cloudTheme: Theme;
@@ -207,7 +191,6 @@ interface SessionProps {
 function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRestart, onExit }: SessionProps) {
   // The worksheet's order, never shuffled: sentences as listed, cloud words as listed.
   const content: Content = {
-    columns: data.columns ?? 1,
     sentences: data.sentences,
     words: data.words,
     blanks: data.sentences.flatMap((s) =>
@@ -227,8 +210,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
   useFontsReady(); // re-measure text once Naskh is loaded
 
   const total = content.blanks.length;
-  // Reusable chips (Unit 3's هٰذا / هٰذِهِ) are never used up: they stay in the cloud for the next blank.
-  const used = new Set(data.reusable ? [] : Object.values(filled));
+  const used = new Set(Object.values(filled));
   const filledCount = Object.keys(filled).length;
 
   // Measuring text is the costly part and every drag move re-renders, so each size is worked out once per render.
@@ -251,8 +233,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
     cardHeight: (_w, areaWidth) => (withStory ? storyH : 0) + metricsFor(font, areaWidth).sentencesH,
     reserveHeight: (_w, areaWidth) => GAP + metricsFor(font, areaWidth).cloudH,
   });
-  const minFont = content.columns > 1 ? MIN_FONT_COLUMNS : MIN_FONT;
-  const fit = useFitGrid(fitConfig(minFont, false));
+  const fit = useFitGrid(fitConfig(MIN_FONT, false));
 
   // The biggest sentence font that fits, with the story; else without it. Nothing fits (phone landscape):
   // smallest sizes and the last-resort scroll.
@@ -262,7 +243,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
   if (fit.area) {
     const { width, height } = fit.area;
     search: for (const withStory of story ? [true, false] : [false]) {
-      for (let font = MAX_FONT; font >= minFont; font -= 4) {
+      for (let font = MAX_FONT; font >= MIN_FONT; font -= 4) {
         layout = solveFitGrid(width, height, fitConfig(font, withStory));
         m = metricsFor(font, width - 2 * INSET);
         showStory = withStory;
@@ -379,10 +360,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
           )}
 
           {/* All the sentences at once, numbered. Dashed boxes are drop targets; a right word stays in its blank. */}
-          <div
-            className={m.columns > 1 ? 'grid shrink-0' : 'flex shrink-0 flex-col'}
-            style={{ width: m.contentWidth, gap: m.rowGap, ...(m.columns > 1 && { gridTemplateColumns: `repeat(${m.columns}, minmax(0, 1fr))` }) }}
-          >
+          <div className="flex shrink-0 flex-col" style={{ width: m.contentWidth, gap: ROW_GAP }}>
             {data.sentences.map((sentence, n) => {
               const complete = content.blanks.filter((b) => b.key.startsWith(`${sentence.id}:`)).every((b) => filled[b.key] !== undefined);
               return (
@@ -472,7 +450,7 @@ function Session({ data, story, storyTheme, cloudTheme, title, instruction, onRe
                 'absolute inset-x-0 bottom-0 flex flex-wrap content-center items-center justify-center rounded-[44px] shadow-[inset_0_-6px_0_rgba(59,58,74,.06)]',
                 THEME[cloudTheme].bg,
               )}
-              style={{ top: PUFF, padding: `${m.cloudPadY}px ${CLOUD_PAD_X}px`, gap: PIECE_GAP }}
+              style={{ top: PUFF, padding: `${CLOUD_PAD_Y}px ${CLOUD_PAD_X}px`, gap: PIECE_GAP }}
             >
               {data.words.map((word) => (
                 <div key={word.id} data-slot={word.id} style={{ width: m.chipW[word.id], height: m.chipH }}>

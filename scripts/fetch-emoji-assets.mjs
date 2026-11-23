@@ -29,6 +29,7 @@ for (const unit of units) {
   for (const f of unit.letterForms.flatMap((set) => set.items)) add(f.emoji, f.target);
   for (const g of unit.games) add(g.emoji, g.title);
   for (const o of (unit.choose ?? []).flatMap((q) => q.options)) if (o.emoji) add(o.emoji, o.text);
+  for (const q of [...(unit.choose ?? []), ...(unit.demonstratives ?? [])]) if (q.emoji) add(q.emoji, q.stem ?? q.question);
 }
 
 async function fetchOk(url) {

@@ -120,22 +120,19 @@ describe('units data', () => {
       expect(q.options.map((o) => o.id), q.id).toContain(q.answerId);
       expect(new Set(q.options.map((o) => o.id)).size, q.id).toBe(q.options.length);
     }
-    expect(unit.games.map((g) => g.id)).toEqual(['letter-forms', 'word-picture', 'unscramble', 'choose', 'fill-blank-2', 'fill-blank', 'sentence-picture']);
+    expect(unit.games.map((g) => g.id)).toEqual(['letter-forms', 'word-picture', 'unscramble', 'choose', 'demonstratives', 'fill-blank', 'sentence-picture']);
   });
 
-  it('Unit 3 second fill-blank: 12 reusable-chip lines, every answer is one of the two chip ids', () => {
-    const data = getUnit('unit-3')!.fillBlank2!;
-    expect(data.reusable).toBe(true);
-    expect(data.words.map((w) => w.id)).toEqual(['hatha', 'hathihi']);
-    expect(data.sentences).toHaveLength(12);
-    for (const sentence of data.sentences) {
-      for (const part of sentence.parts) {
-        if (part.type === 'blank') expect(['hatha', 'hathihi'], sentence.id).toContain(part.accept[0]);
-      }
-    }
+  it('Unit 3 demonstratives: 12 worksheet items, every answer is one of the two options', () => {
     const unit = getUnit('unit-3')!;
-    expect(unit.games.map((g) => g.id).slice(3, 6)).toEqual(['choose', 'fill-blank-2', 'fill-blank']);
-    expect(gameHasContent(unit, 'fill-blank-2')).toBe(true);
+    const items = unit.demonstratives!;
+    expect(items).toHaveLength(12);
+    for (const q of items) {
+      expect(q.options.map((o) => o.id), q.id).toEqual(['hatha', 'hathihi']);
+      expect(['hatha', 'hathihi'], q.id).toContain(q.answerId);
+    }
+    expect(unit.games.map((g) => g.id).slice(3, 6)).toEqual(['choose', 'demonstratives', 'fill-blank']);
+    expect(gameHasContent(unit, 'demonstratives')).toBe(true);
   });
 
   it('Unit 1 has content for every one of its games', () => {
@@ -228,7 +225,7 @@ describe('units data', () => {
   });
 
   it('every emoji in units.ts has at least a static Noto SVG in public/emoji/', () => {
-    const emoji = units.flatMap((u) => [...u.vocab.map((w) => w.emoji), ...letterFormItems(u).map((f) => f.emoji), ...u.games.map((g) => g.emoji), ...(u.choose ?? []).flatMap((q) => q.options.flatMap((o) => (o.emoji ? [o.emoji] : [])))]);
+    const emoji = units.flatMap((u) => [...u.vocab.map((w) => w.emoji), ...letterFormItems(u).map((f) => f.emoji), ...u.games.map((g) => g.emoji), ...[...(u.choose ?? []), ...(u.demonstratives ?? [])].flatMap((q) => [...(q.emoji ? [q.emoji] : []), ...q.options.flatMap((o) => (o.emoji ? [o.emoji] : []))])]);
     const missing = [...new Set(emoji)].filter((e) => !existsSync(`${publicDir}emoji/${emojiCodepoints(e)}.svg`));
     expect(missing, 'run: node scripts/fetch-emoji-assets.mjs').toEqual([]);
   });

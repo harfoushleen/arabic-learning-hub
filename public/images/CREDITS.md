@@ -131,3 +131,8 @@ All supplied by the teacher; GIFs were converted to animated WebP + a still by `
 | `unit-3/zayt.jpg` | — | Teacher | Teacher's PowerPoint slides, used with permission |
 | `unit-3/zaytun.jpg` | — | Teacher | Teacher's PowerPoint slides, used with permission |
 | `unit-3/zuhur.webp`, `unit-3/zuhur-still.webp` | — | Teacher | Teacher's PowerPoint slides, used with permission |
+| `unit-3/scene-1.webp`, `unit-3/scene-2.webp`, `unit-3/scene-3.webp`, `unit-3/scene-4.webp` | — | Teacher | Unit 3 story scenes for the unscramble game, supplied by the teacher |
+| `unit-3/kahf.webp`, `unit-3/kahf-still.webp` (replaced) | — | Teacher | Cartoon cave animation supplied by the teacher |
+| `unit-3/fawakih.webp`, `unit-3/fawakih-still.webp` | — | Teacher | Fruits animation supplied by the teacher |
+| `unit-3/turab.webp`, `unit-3/turab-still.webp` | — | Teacher | Soil animation supplied by the teacher |
+| `unit-3/warda.webp`, `unit-3/warda-still.webp`, `unit-3/namat.webp`, `unit-3/namat-still.webp` | — | Teacher | Flower and sleeping-girl animations supplied by the teacher |

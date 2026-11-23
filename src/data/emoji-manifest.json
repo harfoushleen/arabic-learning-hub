@@ -92,6 +92,9 @@
   "1f407": {
     "animated": true
   },
+  "1f408": {
+    "animated": false
+  },
   "1f40a": {
     "animated": true
   },
@@ -203,6 +206,9 @@
   "1f69a": {
     "animated": true
   },
+  "1f6a9": {
+    "animated": true
+  },
   "1f6aa": {
     "animated": false
   },
@@ -210,6 +216,9 @@
     "animated": false
   },
   "1f6dd": {
+    "animated": false
+  },
+  "1f6de": {
     "animated": false
   },
   "1f6e3": {
