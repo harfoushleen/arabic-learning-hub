@@ -25,6 +25,11 @@ const PRESSABLE = cn(
 
 /** Grid span for a game card: an odd last card is wide; five games sit 3 + 2 on wide screens. */
 function spanClass(count: number, index: number): string {
+  // Seven games on a twelve-column grid: 3 + 3 + 1 (wide) below 900px, 4 + 3 above.
+  if (count === 7) {
+    if (index < 4) return 'min-[560px]:col-span-4 min-[900px]:col-span-3';
+    return index === 6 ? 'min-[560px]:col-span-12 min-[900px]:col-span-4' : 'min-[560px]:col-span-4';
+  }
   if (count !== 5) return 'min-[560px]:odd:last:col-span-2';
   if (index < 3) return 'min-[900px]:col-span-2';
   return index === 4 ? 'min-[560px]:col-span-2 min-[900px]:col-span-3' : 'min-[900px]:col-span-3';
@@ -233,6 +238,7 @@ function UnitScreen({ unit, onBack, onPlay }: { unit: Unit; onBack: () => void; 
           unit.games.length === 5 && 'min-[900px]:grid-cols-6',
           // Six games: 3 + 3 on wide screens.
           unit.games.length === 6 && 'min-[900px]:grid-cols-3',
+          unit.games.length === 7 && 'min-[560px]:grid-cols-12',
         )}
       >
         {unit.games.map((game, index) => {
@@ -314,7 +320,7 @@ function GameDialog({
         }
       >
         <div id="active-game-container" data-game={gameId} data-unit={unit.id}>
-          <Game unitId={unit.id} onExit={onClose} subId={subId} onSub={onSub} />
+          <Game unitId={unit.id} gameId={gameId} onExit={onClose} subId={subId} onSub={onSub} />
         </div>
       </Suspense>
     </DialogContent>

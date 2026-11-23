@@ -5,7 +5,7 @@
 // file straight into Node, which resolves neither.
 import { letterFormItem } from '../lib/arabicJoining.ts';
 
-export type GameId = 'word-picture' | 'sentence-picture' | 'letter-forms' | 'unscramble' | 'fill-blank' | 'choose';
+export type GameId = 'word-picture' | 'sentence-picture' | 'letter-forms' | 'unscramble' | 'fill-blank' | 'fill-blank-2' | 'choose';
 /** A contextual letter form as shown on a choice tile, e.g. 'بـ' 'ـبـ' 'ـب' 'ب' or 'ز' 'ـز'. */
 export type LetterForm = string;
 
@@ -58,7 +58,13 @@ export type FillBlankPart =
   | { type: 'blank'; accept: string[]; fill?: string };
 export interface FillBlankSentence { id: string; parts: FillBlankPart[]; }
 /** One word cloud shared by all of a unit's sentences: every word fills exactly one blank. */
-export interface FillBlankData { words: FillBlankWord[]; sentences: FillBlankSentence[]; }
+export interface FillBlankData {
+  words: FillBlankWord[]; sentences: FillBlankSentence[];
+  /** Opt-in: every chip can fill any number of blanks (it never leaves the cloud). Default: each is used once. */
+  reusable?: boolean;
+  /** Opt-in: lay the sentence cards out in this many columns (default 1). */
+  columns?: 2;
+}
 /** One multiple-choice question (Game 6); the answer is checked by option id. */
 export interface ChooseOption {
   id: string; text: string;
@@ -97,6 +103,8 @@ export interface Unit {
   games: GameDef[]; vocab: VocabWord[]; sentencePictures: SentencePictureItem[];
   letterForms: LetterFormSet[]; unscramble: UnscrambleSet[];
   fillBlank?: FillBlankData;
+  /** The second fill-blank game (Unit 3's demonstratives). */
+  fillBlank2?: FillBlankData;
 }
 
 // Asset conventions (paths are relative to public/, served from the site root):
@@ -665,6 +673,14 @@ export const units: Unit[] = [
         theme: 'sky',
       },
       {
+        id: 'fill-blank-2',
+        title: 'أَسْمَاءُ الإِشَارَةِ',
+        instruction: 'أَخْتارُ اسْمَ الإِشارَةِ المُناسِبَ وَأَضَعُهُ مَكانَ الفَراغِ.',
+        emoji: '👉',
+        short: 'هٰذَا أَمْ هٰذِهِ؟',
+        theme: 'mint',
+      },
+      {
         id: 'fill-blank',
         title: 'مَلْءُ الفَرَاغِ',
         instruction: 'أَمْلَأُ الفَراغَ بِالكَلِمَةِ المُناسِبَةِ.',
@@ -801,6 +817,29 @@ export const units: Unit[] = [
         answerId: 'autumn',
       },
     ],
+    // Worksheet order. Two chips, each reusable for as many blanks as needed; two columns so all 12 fit.
+    fillBlank2: {
+      reusable: true,
+      columns: 2,
+      words: [
+        { id: 'hatha', text: 'هٰذا' },
+        { id: 'hathihi', text: 'هٰذِهِ' },
+      ],
+      sentences: [
+        { id: 'hirr', parts: [{ type: 'blank', accept: ['hatha'] }, { type: 'text', value: ' هِرٌّ.' }] },
+        { id: 'bint', parts: [{ type: 'blank', accept: ['hathihi'] }, { type: 'text', value: ' بِنْتٌ.' }] },
+        { id: 'kitab', parts: [{ type: 'blank', accept: ['hatha'] }, { type: 'text', value: ' كِتابٌ.' }] },
+        { id: 'warda', parts: [{ type: 'blank', accept: ['hathihi'] }, { type: 'text', value: ' وَرْدَةٌ.' }] },
+        { id: 'arnab', parts: [{ type: 'blank', accept: ['hatha'] }, { type: 'text', value: ' أَرْنَبٌ.' }] },
+        { id: 'qalam', parts: [{ type: 'blank', accept: ['hatha'] }, { type: 'text', value: ' قَلَمٌ.' }] },
+        { id: 'zarafa', parts: [{ type: 'blank', accept: ['hathihi'] }, { type: 'text', value: ' زَرافَةٌ.' }] },
+        { id: 'farasha', parts: [{ type: 'blank', accept: ['hathihi'] }, { type: 'text', value: ' فَراشَةٌ.' }] },
+        { id: 'alam', parts: [{ type: 'blank', accept: ['hatha'] }, { type: 'text', value: ' عَلَمٌ.' }] },
+        { id: 'dulab', parts: [{ type: 'blank', accept: ['hatha'] }, { type: 'text', value: ' دولابٌ.' }] },
+        { id: 'bayt', parts: [{ type: 'blank', accept: ['hatha'] }, { type: 'text', value: ' بَيْتٌ.' }] },
+        { id: 'sayyara', parts: [{ type: 'blank', accept: ['hathihi'] }, { type: 'text', value: ' سَيّارَةٌ.' }] },
+      ],
+    },
     // Worksheet order for the sentences and the cloud: the one game that is not shuffled.
     fillBlank: {
       words: [
@@ -853,6 +892,8 @@ export function gameHasContent(unit: Unit, gameId: GameId): boolean {
       return unit.unscramble.some((set) => set.answers.length > 0);
     case 'fill-blank':
       return (unit.fillBlank?.sentences.length ?? 0) > 0;
+    case 'fill-blank-2':
+      return (unit.fillBlank2?.sentences.length ?? 0) > 0;
     case 'choose':
       return (unit.choose?.length ?? 0) > 0;
   }

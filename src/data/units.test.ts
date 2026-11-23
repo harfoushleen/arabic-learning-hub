@@ -120,7 +120,22 @@ describe('units data', () => {
       expect(q.options.map((o) => o.id), q.id).toContain(q.answerId);
       expect(new Set(q.options.map((o) => o.id)).size, q.id).toBe(q.options.length);
     }
-    expect(unit.games.map((g) => g.id)).toEqual(['letter-forms', 'word-picture', 'unscramble', 'choose', 'fill-blank', 'sentence-picture']);
+    expect(unit.games.map((g) => g.id)).toEqual(['letter-forms', 'word-picture', 'unscramble', 'choose', 'fill-blank-2', 'fill-blank', 'sentence-picture']);
+  });
+
+  it('Unit 3 second fill-blank: 12 reusable-chip lines, every answer is one of the two chip ids', () => {
+    const data = getUnit('unit-3')!.fillBlank2!;
+    expect(data.reusable).toBe(true);
+    expect(data.words.map((w) => w.id)).toEqual(['hatha', 'hathihi']);
+    expect(data.sentences).toHaveLength(12);
+    for (const sentence of data.sentences) {
+      for (const part of sentence.parts) {
+        if (part.type === 'blank') expect(['hatha', 'hathihi'], sentence.id).toContain(part.accept[0]);
+      }
+    }
+    const unit = getUnit('unit-3')!;
+    expect(unit.games.map((g) => g.id).slice(3, 6)).toEqual(['choose', 'fill-blank-2', 'fill-blank']);
+    expect(gameHasContent(unit, 'fill-blank-2')).toBe(true);
   });
 
   it('Unit 1 has content for every one of its games', () => {
