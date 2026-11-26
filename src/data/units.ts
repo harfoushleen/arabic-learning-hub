@@ -702,10 +702,10 @@ export const units: Unit[] = [
     // The 5 story sentences, completed, with the same scenes as the unscramble game.
     sentencePictures: [
       { id: 'sp-1', sentence: 'سَتَرَتْ غُيومُ الخَريفِ الشَّمْسَ.', image: '/images/unit-3/scene-1.webp' },
-      { id: 'sp-2', sentence: 'فَتَّشَ الأَرْنَبُ فَرْحانُ عَنْها في غابَةٍ بَعيدَةٍ.', image: '/images/unit-3/scene-2.webp' },
+      { id: 'sp-2', sentence: 'فَتَّشَ الأَرْنَبُ فَرْحان عَنْها في غابَةٍ بَعيدَةٍ.', image: '/images/unit-3/scene-2.webp' },
       { id: 'sp-3', sentence: 'قالَتْ لَهُ العُصْفورَةُ: «الشَّمْسُ سَتَعودُ».', image: '/images/unit-3/bird-sun.webp' },
-      { id: 'sp-4', sentence: 'عادَ فَرْحانُ إِلى أَهْلِهِ وَوَكْرِهِ.', image: '/images/unit-3/scene-3.webp' },
-      { id: 'sp-5', sentence: 'شاهَدَ فَرْحانُ عَوْدَةَ الشَّمْسِ السّاطِعَةِ.', image: '/images/unit-3/scene-4.webp' },
+      { id: 'sp-4', sentence: 'عادَ فَرْحان إِلى أَهْلِهِ وَوَكْرِهِ.', image: '/images/unit-3/scene-3.webp' },
+      { id: 'sp-5', sentence: 'شاهَدَ فَرْحان عَوْدَةَ الشَّمْسِ السّاطِعَةِ.', image: '/images/unit-3/scene-4.webp' },
     ],
     letterForms: [
       {
@@ -756,7 +756,7 @@ export const units: Unit[] = [
         tiles: [
           { id: 'fattasha', text: 'فَتَّشَ' },
           { id: 'alarnab', text: 'الأَرْنَبُ' },
-          { id: 'farhan', text: 'فَرْحانُ' },
+          { id: 'farhan', text: 'فَرْحان' },
           { id: 'anha', text: 'عَنْها' },
           { id: 'fi-gaba', text: 'في غابَةٍ' },
           { id: 'baida', text: 'بَعيدَةٍ' },
@@ -781,7 +781,7 @@ export const units: Unit[] = [
         image: '/images/unit-3/scene-3.webp',
         tiles: [
           { id: 'ada', text: 'عادَ' },
-          { id: 'farhan', text: 'فَرْحانُ' },
+          { id: 'farhan', text: 'فَرْحان' },
           { id: 'ila-ahlihi', text: 'إِلى أَهْلِهِ' },
           { id: 'wawakrihi', text: 'وَوَكْرِهِ' },
         ],
@@ -792,7 +792,7 @@ export const units: Unit[] = [
         image: '/images/unit-3/scene-4.webp',
         tiles: [
           { id: 'shahada', text: 'شاهَدَ' },
-          { id: 'farhan', text: 'فَرْحانُ' },
+          { id: 'farhan', text: 'فَرْحان' },
           { id: 'awda', text: 'عَوْدَةَ' },
           { id: 'ashams', text: 'الشَّمْسِ' },
           { id: 'assatia', text: 'السّاطِعَةِ' },
@@ -817,7 +817,7 @@ export const units: Unit[] = [
         question: 'مَنْ فَتَّشَ عَنِ الشَّمْسِ في غابَةٍ بَعيدَةٍ؟',
         options: [
           { id: 'dog', text: 'فَتَّشَ الكَلْبُ بارودُ عَنِ الشَّمْسِ في غابَةٍ بَعيدَةٍ.', highlight: 'الكَلْبُ بارودُ', emoji: '🐩' },
-          { id: 'rabbit', text: 'فَتَّشَ الأَرْنَبُ فَرْحانُ عَنِ الشَّمْسِ في غابَةٍ بَعيدَةٍ.', highlight: 'الأَرْنَبُ فَرْحانُ', emoji: '🐇' },
+          { id: 'rabbit', text: 'فَتَّشَ الأَرْنَبُ فَرْحان عَنِ الشَّمْسِ في غابَةٍ بَعيدَةٍ.', highlight: 'الأَرْنَبُ فَرْحان', emoji: '🐇' },
         ],
         answerId: 'rabbit',
       },
@@ -854,7 +854,7 @@ export const units: Unit[] = [
         { id: 'shams', text: 'الشَّمْسَ' },
         { id: 'baida', text: 'بَعيدَةٍ' },
         { id: 'ghuyum', text: 'غُيومُ' },
-        { id: 'farhan', text: 'فَرْحانُ' },
+        { id: 'farhan', text: 'فَرْحان' },
       ],
       sentences: [
         {
