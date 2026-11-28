@@ -109,9 +109,9 @@ describe('units data', () => {
     ]);
   });
 
-  it('Unit 3 is teacher-only; its two word sets are disjoint, cover only vocab, and every choose answer exists', () => {
+  it('Unit 3 is public; its two word sets are disjoint, cover only vocab, and every choose answer exists', () => {
     const unit = getUnit('unit-3')!;
-    expect(unit.teacherOnly).toBe(true);
+    expect(unit.teacherOnly).toBeFalsy();
     expect(unit.wordSets!.map((s) => [s.id, s.wordIds.length])).toEqual([['ta', 24], ['ha', 16]]);
     const ids = unit.wordSets!.flatMap((s) => s.wordIds);
     expect(new Set(ids).size).toBe(ids.length);

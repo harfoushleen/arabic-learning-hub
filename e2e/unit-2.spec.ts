@@ -188,7 +188,7 @@ async function expectContained(page: Page, state: string) {
 test.describe('unit 2 shell @chromium', () => {
   test.use({ viewport: { width: 1280, height: 620 } });
 
-  // Unit 2 is now public; re-enable (pointing at a unit flagged teacherOnly) when the next locked unit lands.
+  // Units 2 and 3 are now public; re-enable (pointing at a unit flagged teacherOnly) when the next locked unit lands.
   test.skip('Unit 2 is teacher-only: hidden on home and by link until the code is entered', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('[data-unit-card]')).toHaveCount(1);

@@ -635,7 +635,6 @@ export const units: Unit[] = [
     letters: ['ت', 'ه'],
     theme: 'peach',
     inOrder: true, // story order for the sentence games (unscramble and sentence-picture); words and pictures still shuffle
-    teacherOnly: true,
     games: [
       {
         id: 'letter-forms',
